@@ -1,0 +1,527 @@
+/* ============================================================================
+ * theme.css —— 设计令牌 / 白日·黑夜双主题 / 全局动效 / 通用组件
+ * ----------------------------------------------------------------------------
+ * 【主题切换动效的实现原理】
+ *   1. 用 @property 把「颜色令牌」注册成真正的 CSS 自定义属性（语法 <color>）。
+ *      未注册的自定义属性只是一段字符串，浏览器无法对它做插值；
+ *      注册之后，它就成了可以被 transition 平滑过渡的真实类型值。
+ *   2. 所有组件都只使用 var(--token) 取色，不写死颜色。
+ *   3. 切换主题时只改 <html data-theme="dark|light">，
+ *      令牌在 :root 上做 620ms 插值 → 整站颜色「同时」平滑流动。
+ *   4. JS 额外叠加波纹 / 圆形擦除 / 淡入淡出特效，形成完整的切换动效。
+ * ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+ * 1. 注册可插值的令牌（颜色 + 长度）
+ * ------------------------------------------------------------------------- */
+@property --bg          { syntax: "<color>";  inherits: true; initial-value: #eef1f8; }
+@property --bg-2        { syntax: "<color>";  inherits: true; initial-value: #ffffff; }
+@property --text        { syntax: "<color>";  inherits: true; initial-value: #12141a; }
+@property --muted       { syntax: "<color>";  inherits: true; initial-value: #5c6376; }
+@property --surface     { syntax: "<color>";  inherits: true; initial-value: rgba(255,255,255,.72); }
+@property --surface-2   { syntax: "<color>";  inherits: true; initial-value: rgba(255,255,255,.48); }
+@property --border      { syntax: "<color>";  inherits: true; initial-value: rgba(18,20,26,.10); }
+@property --accent      { syntax: "<color>";  inherits: true; initial-value: #5b7cfa; }
+@property --accent-2    { syntax: "<color>";  inherits: true; initial-value: #8a6bff; }
+@property --shadow      { syntax: "<color>";  inherits: true; initial-value: rgba(23,29,48,.14); }
+@property --blur        { syntax: "<length>"; inherits: true; initial-value: 18px; }
+@property --radius      { syntax: "<length>"; inherits: true; initial-value: 20px; }
+
+/* ---------------------------------------------------------------------------
+ * 2. 令牌定义：:root = 白日主题（浅色）；[data-theme="dark"] = 黑夜主题
+ * ------------------------------------------------------------------------- */
+:root {
+  /* 时间/缓动 */
+  --dur: 620ms;
+  --dur-fast: 220ms;
+  --ease: cubic-bezier(.22, .68, .28, 1);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+
+  /* 白日主题配色 */
+  --bg: #eef1f8;
+  --bg-2: #ffffff;
+  --text: #12141a;
+  --muted: #5c6376;
+  --surface: rgba(255, 255, 255, .72);
+  --surface-2: rgba(255, 255, 255, .48);
+  --border: rgba(18, 20, 26, .10);
+  --shadow: rgba(23, 29, 48, .14);
+  --accent: #5b7cfa;
+  --accent-2: #8a6bff;
+
+  --blob-1: rgba(91, 124, 250, .28);
+  --blob-2: rgba(138, 107, 255, .22);
+  --blob-3: rgba(64, 200, 190, .18);
+  --ink-line: rgba(18, 20, 26, .045);
+
+  color-scheme: light;
+
+  /* ★ 主题动效核心：令牌自身参与过渡，整站颜色随之流动 */
+  transition:
+    --bg var(--dur) var(--ease),
+    --bg-2 var(--dur) var(--ease),
+    --text var(--dur) var(--ease),
+    --muted var(--dur) var(--ease),
+    --surface var(--dur) var(--ease),
+    --surface-2 var(--dur) var(--ease),
+    --border var(--dur) var(--ease),
+    --accent var(--dur) var(--ease),
+    --accent-2 var(--dur) var(--ease),
+    --shadow var(--dur) var(--ease);
+}
+
+[data-theme="dark"] {
+  /* 黑夜主题配色 */
+  --bg: #0a0c12;
+  --bg-2: #12151d;
+  --text: #eef1f8;
+  --muted: #98a1b4;
+  --surface: rgba(24, 28, 38, .66);
+  --surface-2: rgba(30, 35, 47, .5);
+  --border: rgba(255, 255, 255, .10);
+  --shadow: rgba(0, 0, 0, .55);
+  --accent: #6d8bff;
+  --accent-2: #a98cff;
+
+  --blob-1: rgba(80, 110, 240, .30);
+  --blob-2: rgba(150, 100, 255, .24);
+  --blob-3: rgba(40, 180, 200, .18);
+  --ink-line: rgba(255, 255, 255, .05);
+
+  color-scheme: dark;
+}
+
+/* 由强调色派生出来的半透明色（不注册，跟随 --accent 实时变化） */
+:root {
+  --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
+  --accent-line: color-mix(in oklab, var(--accent) 45%, transparent);
+  --track: color-mix(in oklab, var(--text) 14%, transparent);
+  --ring: color-mix(in oklab, var(--accent) 55%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+ * 3. 基础重置
+ * ------------------------------------------------------------------------- */
+* { box-sizing: border-box; }
+
+html, body { min-height: 100%; }
+
+body {
+  margin: 0;
+  font-family: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei UI", "Microsoft YaHei",
+               -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, p, figure { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { border: 0; background: none; cursor: pointer; }
+img { display: block; max-width: 100%; }
+ul { margin: 0; padding: 0; list-style: none; }
+
+/* hidden 属性必须永远生效：否则 img/display:flex 等规则会盖掉它，
+   导致未设置头像时把 alt 文字（"个人头像"）显示出来 */
+[hidden] { display: none !important; }
+
+::selection { background: var(--accent-soft); color: var(--text); }
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* 滚动条 */
+* { scrollbar-width: thin; scrollbar-color: var(--track) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb {
+  background: var(--track);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--accent-line); }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------------------------------------------------------------------------
+ * 4. 背景装饰：双主题各有不同的光斑与网格线
+ * ------------------------------------------------------------------------- */
+.bg-decor {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.bg-decor .blob {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: .95;
+  transition: background var(--dur) var(--ease);
+}
+.blob--1 { width: 46vw; height: 46vw; left: -10vw; top: -12vw; background: var(--blob-1); animation: float1 22s var(--ease) infinite alternate; }
+.blob--2 { width: 38vw; height: 38vw; right: -8vw; top: 6vh; background: var(--blob-2); animation: float2 26s var(--ease) infinite alternate; }
+.blob--3 { width: 42vw; height: 42vw; left: 26vw; bottom: -18vw; background: var(--blob-3); animation: float3 30s var(--ease) infinite alternate; }
+
+.bg-decor .grid-lines {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, var(--ink-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--ink-line) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(120% 90% at 50% 0%, #000 20%, transparent 78%);
+  -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, #000 20%, transparent 78%);
+  transition: background-image var(--dur) var(--ease);
+}
+
+@keyframes float1 { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(4vw, 6vh, 0) scale(1.12); } }
+@keyframes float2 { from { transform: translate3d(0, 0, 0) scale(1.08); } to { transform: translate3d(-5vw, 8vh, 0) scale(.95); } }
+@keyframes float3 { from { transform: translate3d(0, 0, 0) scale(.96); } to { transform: translate3d(6vw, -6vh, 0) scale(1.1); } }
+
+/* ---------------------------------------------------------------------------
+ * 5. 通用组件
+ * ------------------------------------------------------------------------- */
+
+/* 5.1 毛玻璃卡片 —— 技能 / 项目 / 联系方式等板块的视觉基础 */
+.glass {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(var(--blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(160%);
+  box-shadow:
+    0 18px 40px -24px var(--shadow),
+    inset 0 1px 0 color-mix(in oklab, var(--bg-2) 55%, transparent);
+}
+
+.card { padding: 22px; }
+
+/* 5.2 按钮 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: calc(var(--radius) * .6);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease),
+              border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.btn:hover { transform: translateY(-2px); border-color: var(--accent-line); box-shadow: 0 12px 24px -16px var(--shadow); }
+.btn:active { transform: translateY(0) scale(.98); }
+.btn svg { width: 16px; height: 16px; }
+
+.btn--primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 14px 28px -16px var(--accent);
+}
+.btn--primary:hover { box-shadow: 0 18px 34px -14px var(--accent); }
+
+.btn--ghost { background: transparent; }
+.btn--danger { color: #ff6b6b; border-color: color-mix(in oklab, #ff6b6b 35%, transparent); }
+.btn--danger:hover { background: color-mix(in oklab, #ff6b6b 12%, transparent); border-color: #ff6b6b; }
+.btn--sm { padding: 7px 12px; font-size: 13px; }
+
+/* 5.3 图标按钮（设置入口 / 主题切换） */
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  backdrop-filter: blur(calc(var(--blur) * .6));
+  -webkit-backdrop-filter: blur(calc(var(--blur) * .6));
+  transition: transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease),
+              border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.icon-btn:hover { transform: translateY(-2px); border-color: var(--accent-line); color: var(--accent); }
+.icon-btn:active { transform: scale(.94); }
+.icon-btn svg { width: 19px; height: 19px; }
+.icon-btn--sm { width: 34px; height: 34px; border-radius: 11px; }
+.icon-btn--sm svg { width: 16px; height: 16px; }
+
+/* 设置齿轮：悬停缓慢旋转 */
+.icon-btn--gear:hover svg { transform: rotate(60deg); }
+.icon-btn--gear svg { transition: transform 520ms var(--ease-out); }
+
+/* 5.4 昼夜切换按钮：太阳/月亮叠放 + 旋转淡出淡入 */
+.theme-toggle { position: relative; overflow: hidden; }
+.theme-toggle .tm-ico {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transition: transform 520ms var(--ease-out), opacity 320ms var(--ease);
+}
+.theme-toggle .tm-ico--sun { transform: translateY(0) rotate(0deg); opacity: 1; }
+.theme-toggle .tm-ico--moon { transform: translateY(120%) rotate(-90deg); opacity: 0; }
+[data-theme="dark"] .theme-toggle .tm-ico--sun { transform: translateY(-120%) rotate(90deg); opacity: 0; }
+[data-theme="dark"] .theme-toggle .tm-ico--moon { transform: translateY(0) rotate(0deg); opacity: 1; }
+.theme-toggle .auto-badge {
+  position: absolute;
+  right: 4px;
+  bottom: 3px;
+  font-size: 9px;
+  letter-spacing: .5px;
+  color: var(--accent);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+body[data-theme-mode="auto"] .theme-toggle .auto-badge { opacity: 1; transform: translateY(0); }
+
+/* 5.5 表单控件 */
+.field { display: grid; gap: 8px; margin-bottom: 18px; }
+.field__label { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.field__hint { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+.input, .textarea, .select {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: calc(var(--radius) * .55);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 14px;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.input::placeholder, .textarea::placeholder { color: var(--muted); opacity: .75; }
+.input:focus, .textarea:focus, .select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.textarea { min-height: 110px; resize: vertical; line-height: 1.75; }
+.select { appearance: none; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(50% + 1px), calc(100% - 13px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+.select option { background: var(--bg-2); color: var(--text); }
+
+/* 自定义滑杆：用 --p 控制已填充比例 */
+.range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent) 0 var(--p, 0%), var(--track) var(--p, 0%) 100%);
+  cursor: pointer;
+  transition: background var(--dur-fast) linear;
+}
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  background: var(--bg-2);
+  border: 3px solid var(--accent);
+  box-shadow: 0 2px 10px -2px var(--accent);
+  transition: transform var(--dur-fast) var(--ease);
+}
+.range::-webkit-slider-thumb:hover { transform: scale(1.18); }
+.range::-moz-range-thumb {
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--bg-2); border: 3px solid var(--accent); cursor: pointer;
+}
+
+/* 开关 */
+.switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+.switch input { position: absolute; opacity: 0; pointer-events: none; }
+.switch__track {
+  width: 44px; height: 26px; border-radius: 999px;
+  background: var(--track);
+  border: 1px solid var(--border);
+  position: relative;
+  transition: background var(--dur-fast) var(--ease);
+}
+.switch__track::after {
+  content: "";
+  position: absolute; top: 2px; left: 2px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--bg-2);
+  box-shadow: 0 2px 8px -2px var(--shadow);
+  transition: transform 320ms var(--ease-out), background var(--dur-fast) var(--ease);
+}
+.switch input:checked + .switch__track { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.switch input:checked + .switch__track::after { transform: translateX(18px); }
+.switch__text { font-size: 13px; }
+
+/* 分段控件 */
+.seg {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: calc(var(--radius) * .6);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.seg__item {
+  padding: 8px 16px;
+  border-radius: calc(var(--radius) * .45);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.seg__item:hover { color: var(--text); }
+.seg__item.is-active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 8px 18px -12px var(--accent);
+}
+
+/* 色点 */
+.color-dots { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.color-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 12px -6px var(--shadow);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.color-dot:hover { transform: scale(1.12); }
+.color-dot.is-active { border-color: var(--text); transform: scale(1.06); }
+input[type="color"].color-input {
+  width: 44px; height: 30px; padding: 0; border: 1px solid var(--border);
+  border-radius: 9px; background: none; cursor: pointer;
+}
+
+/* 提示条 */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  z-index: 9999;
+  transform: translate(-50%, 24px);
+  padding: 11px 20px;
+  font-size: 13.5px;
+  color: var(--text);
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(calc(var(--blur) * 1.2)) saturate(160%);
+  -webkit-backdrop-filter: blur(calc(var(--blur) * 1.2)) saturate(160%);
+  box-shadow: 0 20px 40px -22px var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms var(--ease), transform 380ms var(--ease-out);
+}
+.toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------------------------------------------------------------------------
+ * 6. 主题切换特效层（由 js/theme.js 动态创建与驱动）
+ * ------------------------------------------------------------------------- */
+
+/* 6.1 波纹：从点击处扩散的强调色光波 */
+.fx-wave {
+  position: fixed;
+  z-index: 9998;
+  left: 0; top: 0;
+  width: 12px; height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, var(--accent-soft) 0%, color-mix(in oklab, var(--accent) 10%, transparent) 45%, transparent 70%);
+  transform: translate3d(var(--fx-x), var(--fx-y), 0) scale(.4);
+  opacity: .95;
+  animation: fx-wave-out var(--fx-dur, 760ms) var(--ease-out) forwards;
+}
+@keyframes fx-wave-out {
+  to { transform: translate3d(var(--fx-x), var(--fx-y), 0) scale(var(--fx-scale, 150)); opacity: 0; }
+}
+
+/* 6.2 圆形擦除：新主题背景从点击处铺满全屏 */
+.fx-wipe {
+  position: fixed;
+  inset: 0;
+  z-index: 9997;
+  pointer-events: none;
+  background: var(--wipe-color);
+  clip-path: circle(0% at var(--fx-x) var(--fx-y));
+  transition: clip-path var(--fx-dur, 620ms) var(--ease-out), opacity var(--dur-fast) var(--ease);
+}
+.fx-wipe.is-grow { clip-path: circle(var(--fx-r, 150%) at var(--fx-x) var(--fx-y)); }
+.fx-wipe.is-out { opacity: 0; }
+
+/* 6.3 淡入淡出：一层与主题同色的薄幕 */
+.fx-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 9997;
+  pointer-events: none;
+  background: var(--wipe-color);
+  opacity: 0;
+  transition: opacity calc(var(--fx-dur, 620ms) / 2) var(--ease), background var(--dur) var(--ease);
+}
+.fx-veil.is-on { opacity: .55; }
+
+/* 6.4 内容层的切换微动效：整页轻微缩放 + 上浮，掩盖颜色插值的瞬间 */
+body.is-switching .shell { animation: shell-swap 620ms var(--ease-out); }
+@keyframes shell-swap {
+  0%   { transform: scale(1); filter: blur(0); }
+  35%  { transform: scale(.992); filter: blur(1.2px); }
+  100% { transform: scale(1); filter: blur(0); }
+}
+
+/* 6.5 原生 View Transitions（浏览器支持时自动获得圆形揭示效果） */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2; }
+
+/* ---------------------------------------------------------------------------
+ * 7. 动画工具类
+ * ------------------------------------------------------------------------- */
+@keyframes fade-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes pop-in  { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
+@keyframes spin    { to { transform: rotate(360deg); } }
+@keyframes pulse   { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+.anim-fade-up { animation: fade-up 620ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 70ms); }
+
+/* 滚动渐入：由 IntersectionObserver 添加 .is-in */
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity 640ms var(--ease-out), transform 640ms var(--ease-out); transition-delay: calc(var(--i, 0) * 70ms); }
+.reveal.is-in { opacity: 1; transform: none; }
+
+/* ---------------------------------------------------------------------------
+ * 8. 无障碍：尊重系统「减弱动态效果」偏好
+ * ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+/* 关闭动效（设置里的开关会给 <html> 加 .no-motion） */
+.no-motion *,
+.no-motion *::before,
+.no-motion *::after {
+  animation-duration: .001ms !important;
+  transition-duration: .001ms !important;
+}
+.no-motion { --dur: 0ms; --dur-fast: 0ms; }

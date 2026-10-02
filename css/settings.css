@@ -1,0 +1,362 @@
+/* ============================================================================
+ * settings.css —— 设置页样式
+ * ----------------------------------------------------------------------------
+ * 布局同样是 CSS Grid，并使用了「网格合并」技巧：
+ *   ① 外层两列命名区域合并：grid-template-areas: "nav panel"
+ *   ② 面板内部表单单行双列：grid-template-columns: repeat(2, minmax(0,1fr))
+ *      需要占满整行的字段（如简介、歌词）用 grid-column: 1 / -1 横向合并整行
+ *   ③ 曲目卡片用 grid-template-areas 把标题栏 / 字段区 / 底部操作合并成三行两块
+ * ========================================================================== */
+
+.settings-page { padding: 26px 0 80px; }
+
+.settings-shell {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+
+  display: grid;
+  /* ① 左侧导航栏 + 右侧设置面板，两块命名区域互不重叠 */
+  grid-template-columns: 238px minmax(0, 1fr);
+  grid-template-areas: "nav panel";
+  gap: 22px;
+  align-items: start;
+}
+
+/* ---------------------------------------------------------------------------
+ * 1. 左侧导航
+ * ------------------------------------------------------------------------- */
+.s-nav {
+  grid-area: nav;
+  position: sticky;
+  top: 26px;
+  padding: 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.s-nav__brand {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);   /* ② 头像 + 标题两列 */
+  grid-template-areas: "logo name";
+  gap: 10px;
+  align-items: center;
+  padding: 4px 6px 14px;
+  margin-bottom: 6px;
+  border-bottom: 1px dashed var(--border);
+}
+.s-nav__logo {
+  grid-area: logo;
+  display: grid; place-items: center;
+  width: 36px; height: 36px;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 10px 20px -14px var(--accent);
+}
+.s-nav__logo svg { width: 18px; height: 18px; }
+.s-nav__name { grid-area: name; font-size: 14px; font-weight: 650; line-height: 1.3; }
+.s-nav__name small { display: block; font-size: 11px; font-weight: 400; color: var(--muted); }
+
+.s-nav__item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;  /* ② 图标 / 文字 / 徽标 三列 */
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: calc(var(--radius) * .5);
+  font-size: 13.5px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.s-nav__item svg { width: 17px; height: 17px; }
+.s-nav__item:hover { color: var(--text); background: var(--surface-2); transform: translateX(2px); }
+.s-nav__item.is-active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 12px 24px -16px var(--accent);
+}
+.s-nav__badge {
+  min-width: 20px;
+  padding: 1px 6px;
+  font-size: 10.5px;
+  text-align: center;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.s-nav__item.is-active .s-nav__badge { background: rgba(255, 255, 255, .22); color: #fff; }
+
+.s-nav__foot { margin-top: 8px; padding-top: 12px; border-top: 1px dashed var(--border); display: grid; gap: 8px; }
+
+/* ---------------------------------------------------------------------------
+ * 2. 右侧面板
+ * ------------------------------------------------------------------------- */
+.s-panel { grid-area: panel; display: grid; gap: 18px; min-width: 0; }
+.s-pane { display: none; padding: 24px 26px; animation: fade-up 420ms var(--ease-out) both; }
+.s-pane.is-active { display: block; }
+
+.s-pane__head { margin-bottom: 20px; }
+.s-pane__title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.s-pane__title .dot { width: 8px; height: 8px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 0 0 4px var(--accent-soft); }
+.s-pane__desc { margin-top: 6px; font-size: 12.5px; color: var(--muted); line-height: 1.8; }
+
+.s-group {
+  padding: 18px 0;
+  border-top: 1px dashed var(--border);
+}
+.s-group:first-of-type { border-top: 0; padding-top: 0; }
+.s-group__title { font-size: 13.5px; font-weight: 650; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.s-group__title svg { width: 15px; height: 15px; color: var(--accent); }
+
+/* ② 表单单行双列布局：需要占满整行的字段加 .field--full（grid-column: 1 / -1） */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+.form-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.field--full { grid-column: 1 / -1; }     /* ⑤ 整行合并：从第一条列线到最后一条 */
+
+.inline-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.inline-row--between { justify-content: space-between; }
+.char-count { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* 面板底部固定操作条 */
+.s-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 20px;
+  padding: 14px 4px 4px;
+  background: linear-gradient(180deg, transparent, var(--bg) 55%);
+}
+.s-saved { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 7px; }
+.s-saved i {
+  width: 7px; height: 7px; border-radius: 50%; background: #34d399;
+  box-shadow: 0 0 0 4px color-mix(in oklab, #34d399 22%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+ * 3. 头像上传
+ * ------------------------------------------------------------------------- */
+.avatar-editor {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);   /* ② 预览 + 操作说明两列 */
+  grid-template-areas: "preview ops";
+  gap: 18px;
+  align-items: center;
+}
+.avatar-preview {
+  grid-area: preview;
+  width: 96px; height: 96px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid; place-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 26px; font-weight: 700;
+}
+.avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-ops { grid-area: ops; display: grid; gap: 10px; }
+
+/* 拖拽上传区 */
+.dropzone {
+  display: grid; place-items: center; gap: 8px;
+  padding: 26px 20px;
+  text-align: center;
+  border: 1.5px dashed var(--border);
+  border-radius: calc(var(--radius) * .75);
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.dropzone:hover, .dropzone.is-over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+  transform: translateY(-2px);
+}
+.dropzone svg { width: 26px; height: 26px; color: var(--accent); }
+.dropzone small { font-size: 11.5px; opacity: .85; }
+.dropzone input[type="file"] { display: none; }
+
+/* ---------------------------------------------------------------------------
+ * 4. 列表编辑器（技能 / 项目 / 曲目）
+ * ------------------------------------------------------------------------- */
+.list-editor { display: grid; gap: 12px; }
+
+/* 单个条目卡片：使用命名区域把「标题行 / 内容区 / 操作行」合并成三行 */
+.edit-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "head  ops"
+    "body  body";
+  gap: 12px;
+  padding: 15px 16px;
+  border-radius: calc(var(--radius) * .7);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  transition: border-color var(--dur-fast) var(--ease), transform 360ms var(--ease-out), box-shadow 360ms var(--ease-out);
+}
+.edit-card:hover { border-color: var(--accent-line); transform: translateY(-2px); box-shadow: 0 20px 36px -30px var(--shadow); }
+.edit-card.is-new { animation: pop-in 400ms var(--ease-out) both; }
+
+.edit-card__head { grid-area: head; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.edit-card__idx {
+  display: grid; place-items: center;
+  width: 24px; height: 24px; flex: none;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.edit-card__title { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.edit-card__ops { grid-area: ops; display: flex; align-items: center; gap: 6px; }
+.edit-card__body { grid-area: body; display: grid; gap: 0 14px; }
+.edit-card__body .field { margin-bottom: 12px; }
+.edit-card__body .field:last-child { margin-bottom: 0; }
+
+/* 列表左下角的「加号按钮」：设置里新增技能 / 项目 / 曲目都靠它 */
+.add-btn {
+  display: grid;
+  grid-auto-flow: column;      /* ④ 图标与文字横向排列 */
+  place-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border: 1.5px dashed var(--border);
+  border-radius: calc(var(--radius) * .7);
+  color: var(--muted);
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), transform 360ms var(--ease-out);
+}
+.add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); transform: translateY(-2px); }
+.add-btn__plus {
+  display: grid; place-items: center;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+  background: var(--accent-soft);
+  color: var(--accent);
+  transition: transform 420ms var(--ease-out);
+}
+.add-btn:hover .add-btn__plus { transform: rotate(90deg) scale(1.08); }
+.add-btn svg { width: 15px; height: 15px; }
+
+/* 曲目额外信息 */
+.track-meta { font-size: 11.5px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* 体积显示 */
+.storage-bars { display: grid; gap: 10px; }
+.storage-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;  /* ② 标签 / 进度条 / 数值 */
+  gap: 12px;
+  align-items: center;
+  font-size: 12.5px;
+}
+.storage-row__bar { height: 8px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.storage-row__bar i { display: block; height: 100%; width: var(--w, 0%); background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 999px; transition: width 700ms var(--ease-out); }
+
+/* ---------------------------------------------------------------------------
+ * 5. 顶部工具条
+ * ------------------------------------------------------------------------- */
+.settings-top {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.settings-top__title { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; }
+.settings-top__title small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+
+/* 主题预览小卡 */
+.theme-preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));   /* ② 白天/黑夜两张预览并排 */
+  gap: 12px;
+}
+.theme-mini {
+  position: relative;
+  height: 96px;
+  border-radius: calc(var(--radius) * .6);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 380ms var(--ease-out), border-color var(--dur-fast) var(--ease), box-shadow 380ms var(--ease-out);
+}
+.theme-mini:hover { transform: translateY(-3px); box-shadow: 0 22px 40px -30px var(--shadow); }
+.theme-mini.is-active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.theme-mini--light { background: linear-gradient(135deg, #f3f5fb, #e6ebf7); }
+.theme-mini--dark { background: linear-gradient(135deg, #0c0f16, #1a1f2b); }
+.theme-mini__card {
+  position: absolute; inset: 18px 16px auto 16px; height: 30px;
+  border-radius: 9px;
+  backdrop-filter: blur(6px);
+}
+.theme-mini--light .theme-mini__card { background: rgba(255, 255, 255, .75); border: 1px solid rgba(18, 20, 26, .08); }
+.theme-mini--dark .theme-mini__card { background: rgba(30, 35, 47, .8); border: 1px solid rgba(255, 255, 255, .1); }
+.theme-mini__line {
+  position: absolute; left: 16px; right: 40px; height: 7px; border-radius: 999px;
+}
+.theme-mini--light .theme-mini__line { background: rgba(18, 20, 26, .12); }
+.theme-mini--dark .theme-mini__line { background: rgba(255, 255, 255, .16); }
+.theme-mini__line--1 { top: 52px; }
+.theme-mini__line--2 { top: 66px; right: 68px; }
+.theme-mini__tag {
+  position: absolute; right: 10px; bottom: 6px;
+  font-size: 10.5px; letter-spacing: .5px;
+  color: var(--accent);
+}
+.theme-mini--dark .theme-mini__tag { color: #a9b6ff; }
+.theme-mini__check {
+  position: absolute; left: 10px; top: 8px;
+  display: grid; place-items: center;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  opacity: 0;
+  transform: scale(.6);
+  transition: opacity 300ms var(--ease), transform 380ms var(--ease-out);
+}
+.theme-mini.is-active .theme-mini__check { opacity: 1; transform: none; }
+.theme-mini__check svg { width: 12px; height: 12px; }
+
+/* ---------------------------------------------------------------------------
+ * 6. 响应式
+ * ------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .settings-shell {
+    grid-template-columns: minmax(0, 1fr);
+    /* ① 窄屏时两列合并成一列：导航在上，面板在下 */
+    grid-template-areas:
+      "nav"
+      "panel";
+  }
+  .s-nav { position: static; }
+  .s-nav__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+}
+
+@media (max-width: 620px) {
+  .form-grid, .form-grid--3 { grid-template-columns: minmax(0, 1fr); }
+  .s-pane { padding: 18px 16px; }
+  .settings-shell, .settings-top { width: calc(100% - 24px); }
+  .avatar-editor { grid-template-columns: minmax(0, 1fr); grid-template-areas: "preview" "ops"; justify-items: center; text-align: center; }
+  .avatar-ops { justify-items: center; }
+}
