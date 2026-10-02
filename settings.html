@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#eef1f8" id="metaTheme">
+<title>设置 · 个人主页</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%235b7cfa'/%3E%3Cpath d='M16 8.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11zm0 14.2c-4 0-7.5 2.2-9 5.3h18c-1.5-3.1-5-5.3-9-5.3z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/theme.css?v=2">
+<link rel="stylesheet" href="css/settings.css?v=2">
+</head>
+<body class="page settings-page">
+
+<div class="bg-decor" aria-hidden="true">
+  <span class="blob blob--1"></span>
+  <span class="blob blob--2"></span>
+  <span class="blob blob--3"></span>
+  <i class="grid-lines"></i>
+</div>
+
+<!-- 顶部工具条 -->
+<header class="settings-top">
+  <div class="settings-top__title">
+    <span class="dot" style="width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 0 0 5px var(--accent-soft)"></span>
+    <div>
+      设置中心
+      <small id="themeNow">当前：白日模式</small>
+    </div>
+  </div>
+  <div class="inline-row">
+    <span class="s-saved" id="savedFlag"><i></i>已自动保存</span>
+    <button class="icon-btn theme-toggle" id="settingsThemeToggle" type="button" title="切换昼夜主题" aria-label="切换主题"></button>
+    <a class="btn" href="index.html">返回主页</a>
+  </div>
+</header>
+
+<!-- =========================================================================
+     设置页骨架：左侧导航 + 右侧面板
+       .settings-shell {
+         grid-template-columns: 238px minmax(0, 1fr);
+         grid-template-areas: "nav panel";     ← 命名区域合并
+       }
+     ====================================================================== -->
+<div class="settings-shell">
+
+  <!-- ============================ 左侧导航 ============================ -->
+  <nav class="s-nav glass" aria-label="设置导航">
+    <div class="s-nav__brand">
+      <span class="s-nav__logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h9"/></svg>
+      </span>
+      <span class="s-nav__name">设置<small>全部改动实时保存</small></span>
+    </div>
+
+    <div class="s-nav__list">
+      <div class="s-nav__item is-active" data-pane="theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg>
+        <span>外观主题</span>
+      </div>
+      <div class="s-nav__item" data-pane="profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.8 20a7.2 7.2 0 0 1 14.4 0"/></svg>
+        <span>个人资料</span>
+      </div>
+      <div class="s-nav__item" data-pane="skills">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.1 5.4L20 10.5l-5.9 2.1L12 18l-2.1-5.4L4 10.5l5.9-2.1z"/></svg>
+        <span>自身技能</span>
+        <span class="s-nav__badge" id="navCountSkills">0</span>
+      </div>
+      <div class="s-nav__item" data-pane="projects">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h3l2 2.5h6A2.5 2.5 0 0 1 20 10v6.5A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z"/></svg>
+        <span>个人项目</span>
+        <span class="s-nav__badge" id="navCountProjects">0</span>
+      </div>
+      <div class="s-nav__item" data-pane="contact">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5z"/><path d="M8 9.5h8M8 13h5"/></svg>
+        <span>联系方式</span>
+        <span class="s-nav__badge" id="navCountContact">0/4</span>
+      </div>
+      <div class="s-nav__item" data-pane="music">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6.6l10-2.1V16"/><circle cx="6.5" cy="18" r="2.6"/><circle cx="16.5" cy="16" r="2.6"/></svg>
+        <span>音乐播放器</span>
+        <span class="s-nav__badge" id="navCountTracks">0</span>
+      </div>
+      <div class="s-nav__item" data-pane="data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6.5" rx="7" ry="3"/><path d="M5 6.5v11c0 1.7 3.1 3 7 3s7-1.3 7-3v-11"/><path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></svg>
+        <span>数据与备份</span>
+      </div>
+    </div>
+
+    <div class="s-nav__foot">
+      <a class="btn btn--sm" href="index.html" id="openHome" style="justify-content:center">预览主页</a>
+      <p class="field__hint" style="text-align:center">主页与设置页可同时打开<br>改动会实时同步</p>
+    </div>
+  </nav>
+
+  <!-- ============================ 右侧面板 ============================ -->
+  <div class="s-panel">
+
+    <!-- ------------------------- 面板 1：外观主题 ------------------------- -->
+    <section class="s-pane glass is-active" data-pane="theme">
+      <div class="s-pane__head">
+        <h2 class="s-pane__title"><span class="dot"></span>外观主题</h2>
+        <p class="s-pane__desc">白日与黑夜两套现代化简约界面。可以手动点击按钮一键切换，也可以交给电脑时间自动切换，切换过程带完整动效。</p>
+      </div>
+
+      <div class="s-group">
+        <h3 class="s-group__title">切换方式</h3>
+        <div class="seg" data-seg="theme.mode">
+          <button class="seg__item" type="button" data-value="manual">🖱 手动按钮切换</button>
+          <button class="seg__item" type="button" data-value="auto">🕒 跟随电脑时间</button>
+        </div>
+        <p class="field__hint" style="margin-top:12px" id="autoHint">
+          选择「跟随电脑时间」后，页面每 30 秒检测一次系统时间，进入白天或夜晚区间时自动完成切换动画。
+        </p>
+
+        <div class="form-grid form-grid--3" style="margin-top:16px">
+          <div class="field">
+            <label class="field__label">白天开始</label>
+            <select class="select" data-path="theme.dayStart" id="dayStartSel"></select>
+          </div>
+          <div class="field">
+            <label class="field__label">黑夜开始</label>
+            <select class="select" data-path="theme.nightStart" id="nightStartSel"></select>
+          </div>
+          <div class="field">
+            <label class="field__label">切换特效</label>
+            <select class="select" data-path="theme.effect">
+              <option value="ripple">波纹扩散（默认）</option>
+              <option value="wipe">圆形擦除揭示</option>
+              <option value="fade">柔和淡入淡出</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="s-group">
+        <h3 class="s-group__title">主题预览与一键切换</h3>
+        <div class="theme-preview">
+          <div class="theme-mini theme-mini--light" data-theme="light" role="button" tabindex="0" aria-label="切换到白日主题">
+            <span class="theme-mini__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+            <span class="theme-mini__card"></span>
+            <span class="theme-mini__line theme-mini__line--1"></span>
+            <span class="theme-mini__line theme-mini__line--2"></span>
+            <span class="theme-mini__tag">白昼 LIGHT</span>
+          </div>
+          <div class="theme-mini theme-mini--dark" data-theme="dark" role="button" tabindex="0" aria-label="切换到黑夜主题">
+            <span class="theme-mini__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+            <span class="theme-mini__card"></span>
+            <span class="theme-mini__line theme-mini__line--1"></span>
+            <span class="theme-mini__line theme-mini__line--2"></span>
+            <span class="theme-mini__tag">黑夜 DARK</span>
+          </div>
+        </div>
+        <div class="inline-row" style="margin-top:14px">
+          <button class="btn btn--primary" type="button" id="switchNow">立即切换一次</button>
+          <span class="field__hint">点击预览卡或按钮都会立刻切换，并播放完整的过渡动效</span>
+        </div>
+      </div>
+
+      <div class="s-group">
+        <h3 class="s-group__title">视觉细节</h3>
+        <div class="field">
+          <label class="field__label">强调色</label>
+          <div class="color-dots" id="accentDots"></div>
+          <div class="inline-row" style="margin-top:10px">
+            <input class="color-input" type="color" id="accentPicker" data-path="theme.accent" aria-label="自定义强调色">
+            <span class="field__hint">渐变色由强调色自动推导，整站按钮、光斑、进度条会一起变化</span>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label class="field__label">圆角大小 <span class="field__hint">（像素）</span></label>
+            <input class="range" type="range" min="0" max="36" step="1" data-path="theme.radius">
+          </div>
+          <div class="field">
+            <label class="field__label">毛玻璃强度 <span class="field__hint">（模糊半径）</span></label>
+            <input class="range" type="range" min="0" max="40" step="1" data-path="theme.blur">
+          </div>
+          <div class="field">
+            <label class="field__label">切换动效时长 <span class="field__hint">（毫秒）</span></label>
+            <input class="range" type="range" min="180" max="1400" step="20" data-path="theme.duration">
+          </div>
+          <div class="field">
+            <label class="field__label">界面动效</label>
+            <label class="switch">
+              <input type="checkbox" data-path="theme.motion">
+              <span class="switch__track"></span>
+              <span class="switch__text">开启过渡与滚动动画</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------- 面板 2：个人资料 ------------------------- -->
+    <section class="s-pane glass" data-pane="profile">
+      <div class="s-pane__head">
+        <h2 class="s-pane__title"><span class="dot"></span>个人资料</h2>
+        <p class="s-pane__desc">左侧栏的圆形头像与姓名，以及「个人简介」板块的普通文本内容。</p>
+      </div>
+
+      <div class="s-group">
+        <h3 class="s-group__title">头像</h3>
+        <div class="avatar-editor">
+          <div class="avatar-preview" id="avatarPreview">A</div>
+          <div class="avatar-ops">
+            <div class="inline-row">
+              <label class="btn btn--primary">
+                选择图片
+                <input type="file" id="avatarInput" accept="image/*" hidden>
+              </label>
+              <button class="btn btn--ghost btn--danger" type="button" id="avatarRemove">移除头像</button>
+            </div>
+            <p class="field__hint">图片会自动居中裁剪成正方形并压缩到 400px，保存后主页的圆形头像与播放器封面同步更新。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="s-group">
+        <h3 class="s-group__title">基本信息</h3>
+        <div class="form-grid">
+          <div class="field">
+            <label class="field__label">姓名 / 昵称</label>
+            <input class="input" type="text" data-path="profile.name" placeholder="你的名字" maxlength="24">
+          </div>
+          <div class="field">
+            <label class="field__label">一句话头衔</label>
+            <input class="input" type="text" data-path="profile.title" placeholder="例如：前端工程师 / 独立开发者" maxlength="40">
+          </div>
+          <div class="field">
+            <label class="field__label">座右铭<span class="field__hint">（可留空）</span></label>
+            <input class="input" type="text" data-path="profile.motto" placeholder="一句话，显示在姓名下方" maxlength="30">
+          </div>
+          <div class="field">
+            <label class="field__label">GitHub 主页地址<span class="field__hint">（项目卡片默认跳转这里）</span></label>
+            <input class="input" type="text" data-path="profile.github" placeholder="https://github.com/你的用户名">
+          </div>
+          <div class="field field--full">
+            <label class="field__label">个人简介<span class="field__hint" id="bioCount">0 字</span></label>
+            <textarea class="textarea" data-path="profile.bio" placeholder="写点什么吧：你的经历、正在做的事、想认识的人…" style="min-height:150px"></textarea>
+            <p class="field__hint">简介以普通文本展示，回车换行会被完整保留。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------- 面板 3：自身技能 ------------------------- -->
+    <section class="s-pane glass" data-pane="skills">
+      <div class="s-pane__head">
+        <h2 class="s-pane__title"><span class="dot"></span>自身技能</h2>
+        <p class="s-pane__desc">每条技能在前端都以毛玻璃卡片展示。点击下方的加号按钮即可无限增加自定义文本，还可以选择卡片尺寸来合并网格单元格。</p>
+      </div>
+      <div class="list-editor" id="skillList"></div>
+      <button class="add-btn" type="button" id="addSkill" style="margin-top:12px;width:100%">
+        <span class="add-btn__plus">＋</span>添加一条技能
+      </button>
+      <p class="field__hint" style="margin-top:12px">
+        尺寸说明：标准 = 1 格；横向合并 = 跨 2 列；纵向合并 = 跨 2 行；2×2 = 一次吃掉四个格子。
+        前端网格使用 <code>grid-auto-flow: dense</code>，合并后的空洞会自动被后面的卡片补上。
+      </p>
+    </section>
+
+    <!-- ------------------------- 面板 4：个人项目 ------------------------- -->
+    <section class="s-pane glass" data-pane="projects">
+      <div class="s-pane__head">
+        <h2 class="s-pane__title"><span class="dot"></span>个人项目</h2>
+        <p class="s-pane__desc">每张项目卡片都是毛玻璃样式，点击整张卡片即可跳转。跳转链接留空时，会自动打开「个人资料」里填写的 GitHub 主页。</p>
+      </div>
+      <div class="list-editor" id="projectList"></div>
+      <button class="add-btn" type="button" id="addProject" style="margin-top:12px;width:100%">
+        <span class="add-btn__plus">＋</span>添加一个项目
+      </button>
+    </section>
+
+    <!-- ------------------------- 面板 5：联系方式 ------------------------- -->
+    <section class="s-pane glass" data-pane="contact">
+      <div class="s-pane__head">
+        <h2 class="s-pane__title"><span class="dot"></span>联系方式</h2>
+        <p class="s-pane__desc">四个填写区域：微信、QQ、邮箱、电话。主页会以毛玻璃卡片展示，点击卡片即可一键复制。</p>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label class="field__label">💬 微信 WeChat</label>
+          <input class="input" type="text" data-path="contact.wechat" placeholder="微信号 / 手机号">
+        </div>
+        <div class="field">
+          <label class="field__label">🐧 QQ</label>
+          <input class="input" type="text" data-path="contact.qq" placeholder="QQ 号">
+        </div>
+        <div class="field">
+          <label class="field__label">✉️ 邮箱 Email</label>
+          <input class="input" type="text" data-path="contact.email" placeholder="name@example.com">
+        </div>
+        <div class="field">
+          <label class="field__label">📱 电话 Phone</label>
+          <input class="input" type="text" data-path="contact.phone" placeholder="+86 138 0000 0000">
+        </div>
+      </div>
+      <p class="field__hint">留空的联系方式在主页会显示为「未填写」的灰色卡片。</p>
+    </section>
+
+    <!-- ------------------------- 面板 6：音乐播放器 ------------------------- -->
+    <section class="s-pane glass" data-pane="music">
+      <div class="s-pane__head">
+        <h2 class="s-pane__title"><span class="dot"></span>音乐播放器</h2>
+        <p class="s-pane__desc">导入本地音乐文件（保存在浏览器 IndexedDB 中，不会上传到任何服务器），编辑歌曲信息与歌词。主页左侧栏即可播放、切换上/下一首。</p>
+      </div>
+
+      <div class="s-group">
+        <h3 class="s-group__title">导入音乐</h3>
+        <label class="dropzone" id="musicDrop">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>
+          点击选择，或把音频文件拖到这里
+          <small>支持 mp3 / wav / flac / m4a / aac / ogg，可一次选多首</small>
+          <input type="file" id="musicInput" accept="audio/*,.mp3,.flac,.wav,.m4a,.ogg" multiple>
+        </label>
+      </div>
+
+      <div class="s-group">
+        <h3 class="s-group__title">播放设置</h3>
+        <div class="form-grid">
+          <div class="field">
+            <label class="field__label">循环模式</label>
+            <div class="seg" data-seg="music.loop">
+              <button class="seg__item" type="button" data-value="list">列表循环</button>
+              <button class="seg__item" type="button" data-value="single">单曲循环</button>
+              <button class="seg__item" type="button" data-value="shuffle">随机播放</button>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field__label">默认音量</label>
+            <input class="range" type="range" min="0" max="100" step="1" id="volRange">
+            <p class="field__hint">当前主音量由主页播放器实时控制</p>
+          </div>
+          <div class="field">
+            <label class="field__label">行为</label>
+            <label class="switch" style="margin-bottom:8px">
+              <input type="checkbox" data-path="music.autoplay">
+              <span class="switch__track"></span>
+              <span class="switch__text">打开主页自动播放</span>
+            </label>
+            <label class="switch">
+              <input type="checkbox" data-path="music.showLyrics">
+              <span class="switch__track"></span>
+              <span class="switch__text">在播放器下方显示歌词</span>
+            </label>
+          </div>
+          <div class="field">
+            <label class="field__label">空曲库时的提示文案</label>
+            <input class="input" type="text" data-path="music.emptyText" placeholder="还没有音乐 · 去设置里导入">
+          </div>
+        </div>
+      </div>
+
+      <div class="s-group">
+        <h3 class="s-group__title">曲目列表 <span class="field__hint" id="trackHint"></span></h3>
+        <div class="list-editor" id="trackList"></div>
+        <div class="inline-row" style="margin-top:12px">
+          <button class="btn btn--danger btn--sm" type="button" id="musicClear">清空曲库</button>
+          <span class="field__hint">歌词支持 LRC 时间轴（如 <code>[00:12.30]歌词</code>）；只写纯文本时，会按歌曲总时长自动均匀铺开并随播放滚动。</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------- 面板 7：数据与备份 ------------------------- -->
+    <section class="s-pane glass" data-pane="data">
+      <div class="s-pane__head">
+        <h2 class="s-pane__title"><span class="dot"></span>数据与备份</h2>
+        <p class="s-pane__desc">所有文字内容保存在浏览器 localStorage，音乐文件保存在 IndexedDB。换电脑或换浏览器时，可用导出的 JSON 快速迁移文字内容。</p>
+      </div>
+
+      <div class="s-group">
+        <h3 class="s-group__title">存储占用</h3>
+        <div class="storage-bars" id="storageBox"></div>
+      </div>
+
+      <div class="s-group">
+        <h3 class="s-group__title">导入 / 导出</h3>
+        <div class="inline-row">
+          <button class="btn btn--primary" type="button" id="exportBtn">导出配置（JSON）</button>
+          <label class="btn">
+            导入配置
+            <input type="file" id="importInput" accept="application/json,.json" hidden>
+          </label>
+          <button class="btn btn--danger" type="button" id="resetBtn">恢复默认</button>
+        </div>
+        <p class="field__hint" style="margin-top:12px">配置文件包含全部文字、主题设置与曲目信息，但不包含音乐文件本身（体积过大，无法放进 JSON）。</p>
+      </div>
+
+      <!-- ★ 部署到 GitHub Pages 必须看：本地数据不会跟着代码一起上线 -->
+      <div class="s-group">
+        <h3 class="s-group__title">部署到 GitHub Pages（让线上显示和本地一致）</h3>
+        <p class="field__hint" style="margin-bottom:12px">
+          文字与音乐都存在<strong>浏览器本地</strong>（localStorage / IndexedDB），它们不会跟着代码上传。
+          所以直接部署后，访客看到的是占位模板。解决办法：把本地内容导出成
+          <code>content.json</code> 放到仓库根目录，线上首次访问会自动载入它。
+        </p>
+        <div class="inline-row">
+          <button class="btn btn--primary" type="button" id="exportSiteBtn">导出为站点默认内容（content.json）</button>
+          <button class="btn" type="button" id="reloadSiteBtn">重新载入站点内容</button>
+        </div>
+        <ul class="deploy-steps">
+          <li><b>1.</b> 点上面的按钮下载 <code>content.json</code>；</li>
+          <li><b>2.</b> 把它和 <code>index.html</code>、<code>settings.html</code>、<code>css/</code>、<code>js/</code> 一起提交到仓库（目录结构不要改）；</li>
+          <li><b>3.</b> 音乐请把音频文件也放进仓库（例如 <code>audio/</code> 目录），再到「音乐播放器」面板给每首曲子填写<b>音频地址</b>，例如 <code>audio/song.mp3</code>；</li>
+          <li><b>4.</b> 打开线上地址确认，必要时按 <kbd>Ctrl</kbd>+<kbd>F5</kbd> 强制刷新清缓存。</li>
+        </ul>
+        <div class="deploy-state">
+          <div class="field__label" style="margin-bottom:6px">当前状态</div>
+          <ul id="deployState"></ul>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="js/store.js?v=2"></script>
+<script src="js/theme.js?v=2"></script>
+<script src="js/settings.js?v=2"></script>
+<script>
+  /* 时间下拉框：0-23 点，动态生成，避免手写 48 个 option */
+  (function () {
+    ['dayStartSel', 'nightStartSel'].forEach(function (id) {
+      var sel = document.getElementById(id);
+      if (!sel) return;
+      for (var h = 0; h < 24; h++) {
+        var o = document.createElement('option');
+        o.value = h;
+        o.textContent = (h < 10 ? '0' + h : h) + ':00';
+        sel.appendChild(o);
+      }
+    });
+  })();
+</script>
+</body>
+</html>
