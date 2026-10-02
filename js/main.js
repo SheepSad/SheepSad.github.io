@@ -322,7 +322,10 @@
       this.renderCurrent();
       this.renderLyrics(track);
       if (!url) {
-        toast('音乐文件丢失，请在设置里重新导入');
+        const t = this.currentTrack();
+        toast(t && !t.src && !t.hasAudio
+          ? '这首还没有音频源，去「设置 → 音乐」导入，或填写音频地址'
+          : '音频文件不在本机，请重新导入或改用音频地址');
         this.setPlayingUI(false);
         return;
       }
@@ -602,6 +605,12 @@
     $('#playBtn').innerHTML = svg('play');
 
     renderAll();
+
+    // ★ 部署到 GitHub Pages 后，访客浏览器里没有任何本地数据：
+    //   这里自动装载仓库根目录的 content.json，让线上显示效果与作者本地一致。
+    store.loadSiteContent().then((seeded) => {
+      if (seeded) toast('已载入站点预设内容');
+    });
 
     // 设置页在另一个标签页保存 → 这里实时刷新
     store.on('change', () => { renderAll(); });

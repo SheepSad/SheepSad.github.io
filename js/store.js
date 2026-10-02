@@ -6,6 +6,9 @@
  *   2. 统一读写 localStorage（文本类数据），并做深度合并，保证后续版本升级不丢字段
  *   3. 提供 IndexedDB 音乐仓库（音频是二进制大文件，不能塞进 localStorage）
  *   4. 提供订阅 / 广播机制：主页与设置页分属两个标签页，靠 storage 事件实时同步
+ *   5. ★ 站点默认内容：部署到 GitHub Pages 后，访客的浏览器里没有任何本地数据，
+ *      页面会退化成占位模板。因此支持读取仓库里的 content.json 作为「站点内容」，
+ *      首次访问自动载入，保证线上显示效果和作者本地完全一致。
  *
  * 说明：本文件为传统脚本（非 ES Module），因为直接用 file:// 双击打开时
  *       ES Module 会被浏览器以 CORS 策略拦截；用全局对象 window.DSH.store 暴露接口。
@@ -13,7 +16,9 @@
 (function (window) {
   'use strict';
 
-  const LS_KEY = 'dsh.home.v1';   // localStorage 键名（文本数据）
+  const LS_KEY = 'dsh.home.v1';        // localStorage 键名（文本数据）
+  const META_KEY = 'dsh.home.meta.v1'; // 本地元信息（是否被访客改过、已装载的站点内容版本）
+  const SITE_CONTENT = 'content.json'; // 站点默认内容文件名（放在仓库根目录）
   const DB_NAME = 'dsh-home-db';  // IndexedDB 库名（音频二进制）
   const DB_VER = 1;
   const STORE_AUDIO = 'audio';
@@ -85,7 +90,8 @@
 
       /* ---- 音乐播放器 ---- */
       music: {
-        tracks: [],                 // { id, title, artist, lyrics, fileName, size, hasAudio }
+        // { id, title, artist, lyrics, src(可选：仓库内/外链音频地址), fileName, size, hasAudio }
+        tracks: [],
         volume: 0.8,
         autoplay: false,
         loop: 'list',               // list 列表循环 | single 单曲循环 | shuffle 随机
@@ -164,6 +170,15 @@
       memoryFallback = obj;
       store.emit('warn', '浏览器未开放本地存储，本次编辑仅在当前标签页有效');
     }
+  }
+
+  /* 元信息：dirty（本地内容是否被手动改过）、seededAt（已装载的站点内容版本） */
+  function readMeta() {
+    try { return JSON.parse(window.localStorage.getItem(META_KEY)) || {}; }
+    catch (err) { return {}; }
+  }
+  function writeMeta(meta) {
+    try { window.localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (err) { /* 忽略 */ }
   }
 
   /* --------------------------------------------------------------------------
@@ -266,8 +281,63 @@
 
     /** 首次加载 */
     load() {
-      this.data = mergeDeep(defaultData(), readLS());
+      const saved = readLS();
+      this.hasSaved = !!saved;                 // 是否已经有本地数据（决定要不要装载站点内容）
+      this.meta = readMeta();
+      this.data = mergeDeep(defaultData(), saved);
       return this.data;
+    },
+
+    /* ---------------- 站点默认内容（content.json） ----------------
+     * 场景：作者在本地把主页编辑好 → 设置页「导出为站点默认内容」→ 把 content.json 提交到仓库。
+     * 之后任何访客（包括作者换设备）第一次打开线上站点，都会自动载入这份内容，
+     * 于是线上和本地显示效果一致；访客自己改过之后则不再覆盖他的改动。
+     * ------------------------------------------------------------ */
+    hasSaved: false,
+    meta: {},
+
+    /** 标记「本地内容已被手动修改」，避免后续被 content.json 覆盖 */
+    markEdited() {
+      this.meta = readMeta();
+      this.meta.dirty = true;
+      writeMeta(this.meta);
+    },
+
+    /** 把一份站点内容写入本地（不算"访客修改"） */
+    applySiteContent(json) {
+      this.data = mergeDeep(defaultData(), json);
+      writeLS(this.data);
+      this.hasSaved = true;
+      this.meta = readMeta();
+      this.meta.dirty = false;
+      this.meta.seededAt = json.updatedAt || json.exportedAt || 'unknown';
+      writeMeta(this.meta);
+      this.emit('change', this.data);
+      return this.data;
+    },
+
+    /**
+     * 装载 content.json
+     * @param {Object} [opts] force=true 时忽略 dirty 标记强制载入
+     * @returns {Promise<Object|null>} 载入成功返回数据，否则 null
+     */
+    async loadSiteContent(opts) {
+      if (window.location.protocol === 'file:') return null;   // file:// 下 fetch 会被拦截，跳过
+      const force = !!(opts && opts.force);
+      if (!force && this.hasSaved && this.meta.dirty) return null;   // 访客已经自己改过，不覆盖
+      try {
+        const res = await window.fetch(SITE_CONTENT + '?t=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) return null;
+        const json = await res.json();
+        if (!json || typeof json !== 'object') return null;
+        const stamp = json.updatedAt || json.exportedAt || '';
+        // 已有本地数据、且就是同一版本 → 不必重载
+        if (!force && this.hasSaved && stamp && stamp === this.meta.seededAt) return null;
+        return this.applySiteContent(json);
+      } catch (err) {
+        // 没有 content.json（404）或跨域失败都属正常，静默忽略
+        return null;
+      }
     },
 
     /** 防抖保存 */
@@ -284,6 +354,7 @@
 
     set(path, value) {
       setPath(this.data, path, value);
+      this.markEdited();
       this.save();
       this.emit('change', this.data);
       return this.data;
@@ -292,6 +363,7 @@
     /** 用回调批量修改（回调直接改 data 即可） */
     update(mutator) {
       mutator(this.data);
+      this.markEdited();
       this.save();
       this.emit('change', this.data);
       return this.data;
@@ -300,6 +372,7 @@
     /** 合并式写入一组 { path: value } */
     patch(pairs) {
       Object.keys(pairs).forEach((p) => setPath(this.data, p, pairs[p]));
+      this.markEdited();
       this.save();
       this.emit('change', this.data);
       return this.data;
@@ -308,6 +381,7 @@
     reset() {
       this.data = defaultData();
       writeLS(this.data);
+      this.markEdited();
       this.emit('change', this.data);
       return this.data;
     },
@@ -318,6 +392,7 @@
       const parsed = JSON.parse(text);
       this.data = mergeDeep(defaultData(), parsed);
       writeLS(this.data);
+      this.markEdited();
       this.emit('change', this.data);
       return this.data;
     },
@@ -352,7 +427,12 @@
     /** 音乐对象 URL 缓存：避免重复读 IndexedDB */
     _urlCache: new Map(),
     async audioURL(track) {
-      if (!track || !track.hasAudio) return '';
+      if (!track) return '';
+      // ★ 线上部署关键：曲目可以直接写仓库内的音频地址（如 audio/song.mp3）或外链。
+      //   IndexedDB 里的本地导入文件只存在作者自己的浏览器里，部署到 GitHub Pages
+      //   之后访客是拿不到的，因此线上站点请使用 src 方式提供音乐。
+      if (track.src && String(track.src).trim()) return String(track.src).trim();
+      if (!track.hasAudio) return '';
       if (this._urlCache.has(track.id)) return this._urlCache.get(track.id);
       const blob = await Audio.get(track.id);
       if (!blob) return '';

@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "updatedAt": "2025-01-01T00:00:00.000Z",
+  "note": "站点默认内容：线上访客第一次打开时会自动载入这份文件。请在设置页把内容编辑成你自己的，然后点「导出为站点默认内容（content.json）」覆盖本文件后提交。",
+
+  "theme": {
+    "mode": "auto",
+    "manual": "light",
+    "dayStart": 7,
+    "nightStart": 19,
+    "accent": "#5b7cfa",
+    "radius": 20,
+    "blur": 18,
+    "motion": true,
+    "duration": 620,
+    "effect": "ripple"
+  },
+
+  "profile": {
+    "name": "你的名字",
+    "title": "一句话介绍你自己",
+    "motto": "",
+    "avatar": "",
+    "bio": "这里还是空的。\n点击左上角的设置按钮，写下属于你的个人简介 —— 你的经历、你在做的事、以及你想遇见的人。",
+    "github": "https://github.com/"
+  },
+
+  "skills": [
+    { "id": "s1", "title": "HTML / CSS", "desc": "语义化结构与现代布局", "size": "normal", "level": 90 },
+    { "id": "s2", "title": "JavaScript", "desc": "原生交互、动效与数据流", "size": "wide", "level": 85 },
+    { "id": "s3", "title": "UI 设计", "desc": "简约现代的视觉语言", "size": "tall", "level": 78 },
+    { "id": "s4", "title": "待补充技能", "desc": "在设置 → 自身技能里点「+」新增", "size": "normal", "level": 60 }
+  ],
+
+  "projects": [
+    {
+      "id": "p1",
+      "name": "示例项目 · 待编辑",
+      "desc": "在这里写项目的一句话介绍。点击这张卡片会打开你的 GitHub 主页（可在设置里修改地址）。",
+      "tags": ["Web", "Demo"],
+      "link": ""
+    },
+    {
+      "id": "p2",
+      "name": "第二个项目",
+      "desc": "项目描述支持多行文本，卡片按毛玻璃风格展示，悬停有光斑跟随效果。",
+      "tags": ["OpenSource"],
+      "link": ""
+    }
+  ],
+
+  "contact": {
+    "wechat": "",
+    "qq": "",
+    "email": "",
+    "phone": ""
+  },
+
+  "music": {
+    "tracks": [],
+    "volume": 0.8,
+    "autoplay": false,
+    "loop": "list",
+    "showLyrics": true,
+    "emptyText": "还没有音乐 · 去设置里导入"
+  },
+
+  "ui": {
+    "reveal": true
+  }
+}

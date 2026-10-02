@@ -339,6 +339,55 @@
 .theme-mini__check svg { width: 12px; height: 12px; }
 
 /* ---------------------------------------------------------------------------
+ * 5.1 部署指引（数据与备份面板）
+ * ------------------------------------------------------------------------- */
+.deploy-steps {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 14px 16px;
+  list-style: none;
+  border-radius: calc(var(--radius) * .6);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 12.5px;
+  line-height: 1.85;
+  color: var(--muted);
+}
+.deploy-steps li { position: relative; padding-left: 4px; }
+.deploy-steps b { color: var(--accent); margin-right: 4px; }
+
+.deploy-state {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: calc(var(--radius) * .6);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  font-size: 12.5px;
+}
+.deploy-state ul { display: grid; gap: 6px; list-style: none; }
+.deploy-state li { position: relative; padding-left: 16px; line-height: 1.7; color: var(--text); }
+.deploy-state li::before {
+  content: "";
+  position: absolute;
+  left: 2px; top: .62em;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* 代码片段样式（部署说明里用） */
+code, kbd {
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .92em;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------------------
  * 6. 响应式
  * ------------------------------------------------------------------------- */
 @media (max-width: 900px) {

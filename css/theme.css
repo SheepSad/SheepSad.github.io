@@ -91,12 +91,35 @@
   color-scheme: dark;
 }
 
-/* 由强调色派生出来的半透明色（不注册，跟随 --accent 实时变化） */
+/* ---------------------------------------------------------------------------
+ * 2.1 由强调色派生出来的半透明色
+ * ---------------------------------------------------------------------------
+ * ⚠️ 线上兼容性：这些值用 color-mix() 从 --accent 实时推导。
+ *    旧版 Safari(<16.2) / Firefox(<113) 不认识 color-mix，
+ *    而「未注册的自定义属性里写了不支持的函数」不会退回上一行声明，
+ *    只会让最终 background/border 变成无效值（界面掉色）。
+ *    所以这里先给一套固定兜底值，再用 @supports 覆盖成动态推导 —— 
+ *    这样任何浏览器打开线上站点都能看到完整的毛玻璃与强调色。
+ * ------------------------------------------------------------------------- */
 :root {
-  --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
-  --accent-line: color-mix(in oklab, var(--accent) 45%, transparent);
-  --track: color-mix(in oklab, var(--text) 14%, transparent);
-  --ring: color-mix(in oklab, var(--accent) 55%, transparent);
+  --accent-soft: rgba(91, 124, 250, .16);
+  --accent-line: rgba(91, 124, 250, .45);
+  --ring: rgba(91, 124, 250, .55);
+  --track: rgba(18, 20, 26, .14);
+}
+[data-theme="dark"] {
+  --accent-soft: rgba(109, 139, 255, .18);
+  --accent-line: rgba(109, 139, 255, .45);
+  --ring: rgba(109, 139, 255, .55);
+  --track: rgba(255, 255, 255, .14);
+}
+@supports (color: color-mix(in oklab, red, blue)) {
+  :root {
+    --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
+    --accent-line: color-mix(in oklab, var(--accent) 45%, transparent);
+    --ring: color-mix(in oklab, var(--accent) 55%, transparent);
+    --track: color-mix(in oklab, var(--text) 14%, transparent);
+  }
 }
 
 /* ---------------------------------------------------------------------------

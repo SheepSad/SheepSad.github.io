@@ -419,8 +419,15 @@
               '<input class="input" data-f="artist" value="' + esc(t.artist) + '" placeholder="未知歌手"></div>' +
             '<div class="field field--full"><label class="field__label">歌词<span class="field__hint">（支持 LRC 时间轴，例如 [00:12.30]第一句；纯文本会按总时长自动铺开）</span></label>' +
               '<textarea class="textarea" data-f="lyrics" style="min-height:96px" placeholder="[00:00.00]第一句歌词&#10;[00:05.20]第二句歌词">' + esc(t.lyrics) + '</textarea></div>' +
+            '<div class="field field--full"><label class="field__label">音频地址' +
+              '<span class="field__hint">（部署到线上必填：仓库内相对路径如 audio/song.mp3，或 https 外链）</span></label>' +
+              '<input class="input" data-f="src" value="' + esc(t.src || '') + '" placeholder="audio/song.mp3">' +
+              '<span class="field__hint">' + (t.src
+                ? '✅ 已配置音频地址，任何访客打开线上站点都能播放'
+                : '⚠️ 当前只有本机导入的音频文件，部署到 GitHub Pages 后访客无法播放；把音频文件一起提交到仓库并在这里填写相对路径即可') + '</span></div>' +
           '</div>' +
           '<div class="track-meta">' +
+            '<span>来源：' + (t.src ? '音频地址' : (t.hasAudio ? '本地导入' : '无音频')) + '</span>' +
             '<span>文件：' + esc(t.fileName || '—') + '</span>' +
             '<span>大小：' + fmtSize(t.size) + '</span>' +
             '<span>歌词：' + ((t.lyrics || '').trim() ? ((t.lyrics || '').trim().split(/\r?\n/).length + ' 行') : '未填写') + '</span>' +
@@ -463,7 +470,7 @@
     }
     previewAudio = previewAudio || new Audio();
     const url = await store.audioURL(track);
-    if (!url) return toast('音频文件不存在，请重新导入');
+    if (!url) return toast(track.src ? '音频地址无法访问，请检查路径是否正确' : '音频文件不在本机，请重新导入或填写音频地址');
     previewAudio.src = url;
     previewAudio.dataset.id = track.id;
     previewAudio.play().then(() => toast('试听：' + (track.title || track.fileName))).catch(() => toast('浏览器拦截了播放，请再点一次'));
@@ -483,6 +490,7 @@
         title: file.name.replace(/\.[^.]+$/, ''),
         artist: '',
         lyrics: '',
+        src: '',                 // 本地导入的文件没有地址；线上部署请填写仓库内音频路径
         fileName: file.name,
         size: file.size,
         hasAudio: true
@@ -546,13 +554,39 @@
   function initData() {
     const exp = $('#exportBtn');
     if (exp) exp.addEventListener('click', () => {
-      const blob = new Blob([store.exportJSON()], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'homepage-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      downloadJSON('homepage-backup-' + new Date().toISOString().slice(0, 10) + '.json', store.exportJSON());
       toast('已导出配置文件（不含音乐文件）');
+    });
+
+    /* ★ 导出为站点默认内容 content.json
+     *   把这个文件提交到仓库根目录后，任何访客第一次打开线上站点
+     *   都会自动载入这份内容 —— 这是「线上显示效果和本地一致」的关键。 */
+    const expSite = $('#exportSiteBtn');
+    if (expSite) expSite.addEventListener('click', () => {
+      const data = store.data;
+      const payload = Object.assign({}, data, {
+        updatedAt: new Date().toISOString(),
+        note: '站点默认内容：由设置页「导出为站点默认内容」生成，提交到仓库根目录后线上访客自动载入'
+      });
+      downloadJSON('content.json', JSON.stringify(payload, null, 2));
+      const localOnly = (data.music.tracks || []).filter((t) => !t.src && t.hasAudio).length;
+      toast(localOnly
+        ? 'content.json 已导出；注意有 ' + localOnly + ' 首音乐只在本机，线上无法播放'
+        : 'content.json 已导出，提交到仓库根目录即可');
+    });
+
+    /* 重新载入仓库里的 content.json（作者更新线上内容后用） */
+    const reloadSite = $('#reloadSiteBtn');
+    if (reloadSite) reloadSite.addEventListener('click', async () => {
+      reloadSite.disabled = true;
+      const seeded = await store.loadSiteContent({ force: true });
+      reloadSite.disabled = false;
+      if (seeded) {
+        syncFields(); renderAllLists(); updateStorage();
+        toast('已重新载入站点内容 content.json');
+      } else {
+        toast('没有找到 content.json，或当前是 file:// 直接打开');
+      }
     });
 
     const imp = $('#importInput');
@@ -584,6 +618,18 @@
 
     const openHome = $('#openHome');
     if (openHome) openHome.addEventListener('click', () => { location.href = 'index.html'; });
+  }
+
+  /** 触发一次文件下载 */
+  function downloadJSON(filename, text) {
+    const blob = new Blob([text], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
 
   /* --------------------------------------------------------------------------
@@ -666,6 +712,15 @@
     store.on('saved', flashSaved);
     store.on('warn', toast);
 
+    // ★ 线上部署：访客本地没有数据时，自动载入仓库里的 content.json
+    store.loadSiteContent().then((seeded) => {
+      if (seeded) {
+        syncFields(); renderAllLists(); updateStorage();
+        toast('已载入站点预设内容 content.json');
+      }
+      renderDeployState();
+    });
+
     // 离开前确保数据落盘
     window.addEventListener('beforeunload', () => store.save());
 
@@ -674,6 +729,26 @@
       const label = $('#autoHint');
       if (label) label.textContent = '当前每 30 秒检测一次系统时间，到点自动切换';
     }
+  }
+
+  /** 数据面板里的「线上部署状态」提示 */
+  function renderDeployState() {
+    const box = $('#deployState');
+    if (!box) return;
+    const isFile = location.protocol === 'file:';
+    const localOnly = (store.get('music.tracks') || []).filter((t) => !t.src && t.hasAudio).length;
+    const items = [
+      isFile
+        ? '当前用 file:// 直接打开：可以正常编辑，但无法读取 content.json（改用本地服务器或线上地址即可）'
+        : '当前通过 http(s) 打开：会把同目录下的 content.json 当作站点默认内容载入',
+      store.hasSaved && store.meta.dirty
+        ? '本地已有你自己的编辑内容（不会被 content.json 覆盖）'
+        : '本地尚未做修改（每次打开都会自动同步 content.json 的最新内容）',
+      localOnly
+        ? '有 ' + localOnly + ' 首音乐只存在于本机，线上访客听不到 —— 把音频放进仓库并在曲目里填写「音频地址」'
+        : '音乐来源已配置好，线上可以正常播放'
+    ];
+    box.innerHTML = items.map((t) => '<li>' + esc(t) + '</li>').join('');
   }
 
   document.addEventListener('DOMContentLoaded', init);
