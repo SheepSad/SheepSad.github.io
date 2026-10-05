@@ -19,6 +19,7 @@
   const LS_KEY = 'dsh.home.v1';        // localStorage 键名（文本数据）
   const META_KEY = 'dsh.home.meta.v1'; // 本地元信息（是否被访客改过、已装载的站点内容版本）
   const SITE_CONTENT = 'content.json'; // 站点默认内容文件名（放在仓库根目录）
+  const AUDIO_DIR = 'audio/';          // 仓库里放音频的约定目录（见 README 第六节）
   const DB_NAME = 'dsh-home-db';  // IndexedDB 库名（音频二进制）
   const DB_VER = 1;
   const STORE_AUDIO = 'audio';
@@ -212,6 +213,37 @@
   function isPristineContent(d) {
     return contentSignature(d) === contentSignature(defaultData());
   }
+
+  /* --------------------------------------------------------------------------
+   * 2.95 重新装载 content.json 时，要保住访客自己改过的「个性化偏好」
+   * ---------------------------------------------------------------------------
+   * ★ 踩过的坑：作者重新导出 content.json（updatedAt 变了）之后，
+   *   访客再打开页面就会整份重新装载，连带把 theme / 循环模式 / 音量
+   *   一起顶回仓库里的值 —— 表现就是"在设置里改的循环模式，一回主页就被刷新"。
+   *   做法：每次装载时记下当时的偏好快照；下次装载时逐项比对，
+   *   本地值和快照不一样 → 说明访客自己动过 → 保留访客的；
+   *   一样 → 访客没动过 → 跟随 content.json（作者更新主题仍然能推送给访客）。
+   * ------------------------------------------------------------------------ */
+  const PREF_PATHS = ['theme', 'ui', 'music.loop', 'music.volume', 'music.autoplay', 'music.showLyrics'];
+  const sameValue = (a, b) => { try { return JSON.stringify(a) === JSON.stringify(b); } catch (err) { return a === b; } };
+
+  /** 偏好快照（拍平成「路径 → 值」，不依赖 setPath 建中间层） */
+  function prefSnapshot(d) {
+    const flat = {};
+    PREF_PATHS.forEach((p) => { flat[p] = getPath(d, p); });
+    return flat;
+  }
+  /** 把访客改过的偏好搬回即将装载的数据上 */
+  function keepVisitorPrefs(incoming, local, seeded) {
+    if (!seeded) return incoming;                       // 没有快照（首次装载）→ 整份采用 content.json
+    PREF_PATHS.forEach((p) => {
+      const localVal = getPath(local, p);
+      if (localVal === undefined) return;
+      if (sameValue(localVal, seeded[p])) return;       // 访客没动过 → 跟随 content.json
+      setPath(incoming, p, localVal);                   // 访客动过 → 保留访客的
+    });
+    return incoming;
+  }
   /**
    * 更宽松的「这份数据还没被认领」判断：姓名还是占位名、没有头像/简介/联系方式/曲库。
    * isPristineContent() 要求逐字节相同，跨版本（内置示例文案改过）会失效，所以再加这一层，
@@ -228,6 +260,31 @@
       && String(p.name || '') === placeholder
       && !Object.keys(c).some((k) => String(c[k] || '').trim())
       && !(((d.music && d.music.tracks) || []).length);
+  }
+
+  /* --------------------------------------------------------------------------
+   * 2.96 音频地址探测
+   * ---------------------------------------------------------------------------
+   * 曲目只填了文件名时，用一次 HEAD 探测判断 audio/ 目录里是否存在同名文件。
+   * 探测结果缓存起来，避免每次切歌都发请求；探测失败一律当作"不存在"，
+   * 于是行为退回原样（不会因为探测本身出错而放不出音乐）。
+   * ------------------------------------------------------------------------ */
+  const urlExistsCache = new Map();
+  async function urlExists(url) {
+    if (urlExistsCache.has(url)) return urlExistsCache.get(url);
+    let ok = false;
+    try {
+      const res = await window.fetch(url, { method: 'HEAD' });
+      ok = res.ok;
+      if (!ok) {                                   // 有些静态服务器不支持 HEAD，用 Range GET 再确认一次
+        const res2 = await window.fetch(url, { headers: { Range: 'bytes=0-0' } });
+        ok = res2.ok;
+      }
+    } catch (err) {
+      ok = false;                                  // file:// / 跨域 / 离线：探测不了就当不存在
+    }
+    urlExistsCache.set(url, ok);
+    return ok;
   }
 
   /* --------------------------------------------------------------------------
@@ -412,12 +469,16 @@
 
     /** 把一份站点内容写入本地（不算"访客修改"） */
     applySiteContent(json) {
-      this.data = buildData(json);
+      const incoming = buildData(json);
+      const seeded = this.meta && this.meta.seededPrefs;
+      keepVisitorPrefs(incoming, this.data, seeded);     // 访客自己改过的偏好不被顶掉
+      this.data = incoming;
       writeLS(this.data);
       this.hasSaved = true;
       this.meta = readMeta();
       this.meta.dirty = false;
       this.meta.seededAt = json.updatedAt || json.exportedAt || 'unknown';
+      this.meta.seededPrefs = prefSnapshot(this.data);   // 记下本次装载时的偏好，供下次比对
       writeMeta(this.meta);
       this.emit('change', this.data);
       return this.data;
@@ -549,7 +610,17 @@
       // ★ 线上部署关键：曲目可以直接写仓库内的音频地址（如 audio/song.mp3）或外链。
       //   IndexedDB 里的本地导入文件只存在作者自己的浏览器里，部署到 GitHub Pages
       //   之后访客是拿不到的，因此线上站点请使用 src 方式提供音乐。
-      if (track.src && String(track.src).trim()) return String(track.src).trim();
+      const raw = String(track.src || '').trim();
+      if (raw) {
+        /* ★ 只写了文件名的情况：仓库约定音频放在 audio/ 目录（README 也是这么写的），
+             但设置页里很容易只填 "歌名.mp3"，于是线上就 404、音乐放不出来。
+             这里先探一下 audio/ 目录里有没有同名文件，有就用它，没有再用原样的地址。 */
+        if (!/[/\\]/.test(raw) && !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(raw)) {
+          const guess = AUDIO_DIR + raw;
+          if (await urlExists(guess)) return guess;
+        }
+        return raw;
+      }
       if (!track.hasAudio) return '';
       if (this._urlCache.has(track.id)) return this._urlCache.get(track.id);
       const blob = await Audio.get(track.id);

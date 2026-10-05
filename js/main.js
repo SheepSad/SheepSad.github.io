@@ -249,6 +249,9 @@
     lineIndex: -1,
     lineH: 33,
     playing: false,
+    shuffleBag: [],        // 随机播放的「洗牌袋」：一轮内不重复
+    shuffleHistory: [],    // 随机模式下实际播过的顺序，供"上一首"回退
+    _lastLoop: null,       // 上一次的循环模式，用来在切模式时重置洗牌袋
 
     init() {
       this.audio = $('#audio');
@@ -313,6 +316,7 @@
     setTracks(tracks, keepIndex) {
       const prevId = keepIndex && this.tracks[this.index] ? this.tracks[this.index].id : null;
       this.tracks = tracks.slice();
+      this.resetShuffle();                                          // 曲库变了，洗牌袋里的下标就作废了
       if (prevId) {
         const i = this.tracks.findIndex((t) => t.id === prevId);
         this.index = i >= 0 ? i : (this.tracks.length ? 0 : -1);
@@ -350,29 +354,77 @@
 
     play() {
       if (!this.tracks.length) { toast('还没有音乐，去设置里导入吧'); return; }
-      if (this.index < 0 || !this.audio.src) { this.load(0, true); return; }
+      // 随机模式下别总是从第一首开始
+      if (this.index < 0 || !this.audio.src) { this.load(this.isShuffle() ? this.shuffleStart() : 0, true); return; }
       this.audio.play().catch(() => {});
     },
     pause() { this.audio.pause(); },
     toggle() { this.audio.paused ? this.play() : this.pause(); },
-    next(auto) { if (this.tracks.length) this.load(this.index + 1, true); },
+    next(auto) {
+      if (!this.tracks.length) return;
+      if (this.isShuffle()) {                        // 随机模式：走洗牌袋（以前这里无条件 +1，所以按钮切歌永远是顺序的）
+        this.shuffleHistory.push(this.index);
+        this.load(this.shuffleNext(), true);
+        return;
+      }
+      this.load(this.index + 1, true);
+    },
     prev() {
       if (!this.tracks.length) return;
       // 播放超过 3 秒时，"上一首"先回到本曲开头（更符合直觉）
       if (this.audio.currentTime > 3 && !this.audio.paused) { this.audio.currentTime = 0; return; }
+      if (this.isShuffle() && this.shuffleHistory.length) {
+        this.load(this.shuffleHistory.pop(), true);  // 随机模式：按实际播放顺序回退
+        return;
+      }
       this.load(this.index - 1, true);
     },
 
     onEnded() {
       const mode = store.get('music.loop');
-      if (mode === 'single') { this.audio.currentTime = 0; this.audio.play(); return; }
-      if (mode === 'shuffle' && this.tracks.length > 1) {
-        let n = this.index;
-        while (n === this.index) n = Math.floor(Math.random() * this.tracks.length);
-        this.load(n, true);
+      if (mode === 'single') {
+        this.audio.currentTime = 0;
+        // 浏览器可能因为"没有用户交互"拒绝播放，这里必须接住，否则控制台会报未处理的 Promise 异常
+        this.audio.play().catch(() => this.setPlayingUI(false));
         return;
       }
-      this.load(this.index + 1, true);
+      this.next(true);                               // 顺序 / 随机都交给 next()，随机逻辑只留一处
+    },
+
+    /* ---- 随机播放 ----------------------------------------------------------
+     * 用「洗牌袋」而不是每次独立取随机数：
+     *   独立取随机数时，5 首歌里连着抽到同一首的概率并不低，
+     *   听起来就像"根本没随机"；洗牌袋保证一轮里每首都放到，且不会马上重复。
+     * ---------------------------------------------------------------------- */
+    isShuffle() { return String(store.get('music.loop') || 'list') === 'shuffle'; },
+
+    /** 洗一袋「除当前曲之外的其余曲目」（Fisher–Yates） */
+    fillShuffleBag(exclude) {
+      const bag = [];
+      for (let i = 0; i < this.tracks.length; i++) if (i !== exclude) bag.push(i);
+      for (let i = bag.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = bag[i]; bag[i] = bag[j]; bag[j] = tmp;
+      }
+      this.shuffleBag = bag;
+    },
+
+    /** 随机模式下的下一首 */
+    shuffleNext() {
+      const n = this.tracks.length;
+      if (n < 2) return this.index;
+      if (!this.shuffleBag.length) this.fillShuffleBag(this.index);   // 一轮放完 → 重新洗
+      let pick = this.shuffleBag.shift();
+      if (pick === undefined || pick === this.index) pick = (this.index + 1) % n;   // 兜底：绝不原地打转
+      return pick;
+    },
+
+    /** 切模式 / 换曲库时把洗牌袋与历史清掉，避免用到过期的下标 */
+    resetShuffle() { this.shuffleBag = []; this.shuffleHistory = []; },
+
+    /** 随机模式下的起始曲目（点播放时不要总是从第一首开始） */
+    shuffleStart() {
+      return this.tracks.length ? Math.floor(Math.random() * this.tracks.length) : 0;
     },
 
     setPlayingUI(on) {
@@ -418,6 +470,8 @@
       const btn = $('#loopBtn');
       if (!btn) return;
       const cur = String(store.get('music.loop') || 'list');
+      // 模式变了（主页按钮或设置页分段控件）→ 洗牌袋与历史重新开始
+      if (this._lastLoop !== cur) { this._lastLoop = cur; this.resetShuffle(); }
       const hit = LOOP_MODES.filter((m) => m.id === cur)[0] || LOOP_MODES[0];
       btn.innerHTML = svg(hit.icon);
       btn.title = '循环模式：' + hit.name + '（点击切换）';
