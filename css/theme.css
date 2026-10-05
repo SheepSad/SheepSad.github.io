@@ -92,8 +92,7 @@
 
   color-scheme: light;
 
-  /* ★ 主题动效核心：令牌自身参与过渡，整站颜色随之流动 */
-  transition:
+  /* ★ 主题动效核心：令牌自身参与过渡，整站颜色随之流动 */  transition:
     --bg var(--dur) var(--ease),
     --bg-2 var(--dur) var(--ease),
     --text var(--dur) var(--ease),
@@ -107,6 +106,11 @@
     --sh-light var(--dur) var(--ease),
     --sh-dark var(--dur) var(--ease);
 }
+
+/* 启动期（页面 <head> 里的预置脚本加上，theme.js 在首次装载结束后移除）：
+   只关掉「令牌自身」的过渡 —— 元素自己的淡入/悬停动画不受影响。
+   这样即使首屏配色和最终配色不同，也是瞬间对齐，而不是花 620ms 慢慢变色。 */
+html.theme-boot { transition: none !important; }
 
 [data-theme="dark"] {
   /* ---- 黑夜主题：深蓝黑底。新拟态在暗色下反差不靠纯黑，而靠「抬灰」 ---- */

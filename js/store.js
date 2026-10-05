@@ -180,13 +180,54 @@
     }
   }
 
-  /* 元信息：dirty（本地内容是否被手动改过）、seededAt（已装载的站点内容版本） */
+  /* 元信息：dirty（本地「内容」是否被手动改过）、seededAt（已装载的站点内容版本） */
   function readMeta() {
     try { return JSON.parse(window.localStorage.getItem(META_KEY)) || {}; }
     catch (err) { return {}; }
   }
   function writeMeta(meta) {
     try { window.localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (err) { /* 忽略 */ }
+  }
+
+  /* --------------------------------------------------------------------------
+   * 2.9 「内容」与「个性化设置」的边界
+   * ---------------------------------------------------------------------------
+   * ★ 这里踩过一个坑：以前 set/patch/update 一律把 dirty 置为 true，
+   *   而只要 dirty 为 true，loadSiteContent() 就永远不再装载仓库里的 content.json。
+   *   于是访客（包括作者自己在线上）随手切一下昼夜、换个循环模式，
+   *   整份 content.json 就被永久拒之门外 —— 主页右侧只剩内置示例内容。
+   *   现在只有真的改了「资料 / 技能 / 项目 / 联系方式 / 曲库」才算改过内容；
+   *   主题、昼夜、音量、循环模式这些个性化偏好不影响装载。
+   * ------------------------------------------------------------------------ */
+  function isContentPath(path) {
+    const p = String(path || '');
+    return /^(profile|skills|projects|contact)(\.|$)/.test(p) || /^music\.tracks(\.|$)/.test(p);
+  }
+  /** 站点内容指纹：不含 theme / ui / 播放偏好 */
+  function contentSignature(d) {
+    if (!d) return '';
+    return JSON.stringify([d.profile, d.skills, d.projects, d.contact, (d.music && d.music.tracks) || []]);
+  }
+  /** 本地内容是否还和内置示例一模一样（说明从来没真正编辑过内容） */
+  function isPristineContent(d) {
+    return contentSignature(d) === contentSignature(defaultData());
+  }
+  /**
+   * 更宽松的「这份数据还没被认领」判断：姓名还是占位名、没有头像/简介/联系方式/曲库。
+   * isPristineContent() 要求逐字节相同，跨版本（内置示例文案改过）会失效，所以再加这一层，
+   * 用来修复老版本留下的"假 dirty"——它会让 content.json 永远装载不进来。
+   */
+  function looksUnclaimed(d) {
+    if (!d) return true;
+    const p = d.profile || {};
+    const c = d.contact || {};
+    const sample = defaultData();
+    const placeholder = String((sample.profile && sample.profile.name) || '你的名字');
+    return !p.avatar
+      && !String(p.bio || '').trim()
+      && String(p.name || '') === placeholder
+      && !Object.keys(c).some((k) => String(c[k] || '').trim())
+      && !(((d.music && d.music.tracks) || []).length);
   }
 
   /* --------------------------------------------------------------------------
@@ -336,13 +377,21 @@
       const saved = readLS();
       this.hasSaved = !!saved;                 // 是否已经有本地数据（决定要不要装载站点内容）
       this.meta = readMeta();
-      // 老版本留下的本地数据没有 meta 记录：视同「作者自己编辑过」，
+      this.data = buildData(saved);
+      // 老版本留下的本地数据没有 meta 记录：如果内容确实被编辑过，视同「作者自己改过」，
       // 标记为 dirty，避免升级后被仓库里的 content.json 覆盖掉手工内容。
-      if (this.hasSaved && !this.meta.seededAt && !this.meta.dirty) {
+      // （内容还是内置示例时不算改过 —— 否则只调过主题的访客会被误判，从此再也装不到 content.json）
+      if (this.hasSaved && !this.meta.seededAt && !this.meta.dirty && !isPristineContent(this.data)) {
         this.meta.dirty = true;
         writeMeta(this.meta);
       }
-      this.data = buildData(saved);
+      // ★ 自愈：早期版本只要动过任何设置就把 dirty 置了 true，导致 content.json 永远装载不了。
+      //   两种"假 dirty"都要清掉，让 content.json 正常装载：
+      //   ① 本地内容与内置示例完全一致；② 从未装载过 content.json，且这份内容从没被认领过。
+      if (this.meta.dirty && (isPristineContent(this.data) || (!this.meta.seededAt && looksUnclaimed(this.data)))) {
+        this.meta.dirty = false;
+        writeMeta(this.meta);
+      }
       return this.data;
     },
 
@@ -382,12 +431,19 @@
     async loadSiteContent(opts) {
       if (window.location.protocol === 'file:') return null;   // file:// 下 fetch 会被拦截，跳过
       const force = !!(opts && opts.force);
-      if (!force && this.hasSaved && this.meta.dirty) return null;   // 访客已经自己改过，不覆盖
       try {
         const res = await window.fetch(SITE_CONTENT + '?t=' + Date.now(), { cache: 'no-store' });
         if (!res.ok) return null;
         const json = await res.json();
         if (!json || typeof json !== 'object') return null;
+        /* ★ 本地「内容」与仓库里的完全一致 → 这个 dirty 是历史误判（早期版本动过任何设置都会置 true），
+             清掉它，否则这份 content.json 以后再也更新不进来了。 */
+        if (!force && this.meta.dirty &&
+            contentSignature(buildData(json)) === contentSignature(this.data)) {
+          this.meta.dirty = false;
+          writeMeta(this.meta);
+        }
+        if (!force && this.hasSaved && this.meta.dirty) return null;   // 访客确实改过内容，不覆盖
         const stamp = json.updatedAt || json.exportedAt || '';
         // 已有本地数据、且就是同一版本 → 不必重载
         if (!force && this.hasSaved && stamp && stamp === this.meta.seededAt) return null;
@@ -412,7 +468,7 @@
 
     set(path, value) {
       setPath(this.data, path, value);
-      this.markEdited();
+      if (isContentPath(path)) this.markEdited();      // 主题/播放偏好不算改过内容
       this.save();
       this.emit('change', this.data);
       return this.data;
@@ -420,8 +476,9 @@
 
     /** 用回调批量修改（回调直接改 data 即可） */
     update(mutator) {
+      const before = contentSignature(this.data);
       mutator(this.data);
-      this.markEdited();
+      if (contentSignature(this.data) !== before) this.markEdited();
       this.save();
       this.emit('change', this.data);
       return this.data;
@@ -430,11 +487,14 @@
     /** 合并式写入一组 { path: value } */
     patch(pairs) {
       Object.keys(pairs).forEach((p) => setPath(this.data, p, pairs[p]));
-      this.markEdited();
+      if (Object.keys(pairs).some(isContentPath)) this.markEdited();
       this.save();
       this.emit('change', this.data);
       return this.data;
     },
+
+    /** 本地内容是否仍是内置示例（用来判断线上有没有装到 content.json） */
+    isPristine() { return isPristineContent(this.data); },
 
     reset() {
       this.data = defaultData();

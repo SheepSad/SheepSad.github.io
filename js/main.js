@@ -743,7 +743,12 @@
     // ★ 部署到 GitHub Pages 后，访客浏览器里没有任何本地数据：
     //   这里自动装载仓库根目录的 content.json，让线上显示效果与作者本地一致。
     store.loadSiteContent().then((seeded) => {
+      theme.endBoot();                       // 首屏配色已定，恢复主题过渡动画
       if (seeded) toast('已载入站点预设内容');
+      else if (store.isPristine()) {
+        // 没装到 content.json、而且本地还是内置示例 → 直说，免得以为"我的内容丢了"
+        toast('没找到 content.json，当前显示的是示例内容');
+      }
     });
 
     // 设置页在另一个标签页保存 → 这里实时刷新

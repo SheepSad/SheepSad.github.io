@@ -6,8 +6,34 @@
 <meta name="theme-color" content="#f5f5f7" id="metaTheme">
 <title>设置 · 个人主页</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%235b7cfa'/%3E%3Cpath d='M16 8.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11zm0 14.2c-4 0-7.5 2.2-9 5.3h18c-1.5-3.1-5-5.3-9-5.3z' fill='%23fff'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/theme.css?v=12">
-<link rel="stylesheet" href="css/settings.css?v=12">
+<link rel="stylesheet" href="css/theme.css?v=13">
+<link rel="stylesheet" href="css/settings.css?v=13">
+
+<!-- 首屏主题预置：与 index.html 同一段脚本，说明见那边 -->
+<script>
+(function () {
+  var root = document.documentElement;
+  root.classList.add('theme-boot');                 /* 启动期先别做令牌过渡 */
+  try {
+    var d = JSON.parse(localStorage.getItem('dsh.home.v1') || 'null');
+    var t = (d && d.theme) || {};
+    var theme = t.manual === 'dark' ? 'dark' : 'light';
+    if (t.mode === 'auto') {                        /* 跟随电脑时间：这里也先算一遍 */
+      var h = new Date().getHours();
+      var day = isNaN(+t.dayStart) ? 7 : +t.dayStart;
+      var night = isNaN(+t.nightStart) ? 19 : +t.nightStart;
+      theme = (h >= day && h < night) ? 'light' : 'dark';
+    }
+    root.setAttribute('data-theme', theme);
+    var css = localStorage.getItem('dsh.home.themecss.v1');
+    var el = document.createElement('style');
+    el.id = 'dsh-color-overrides';                  /* 与 theme.js 共用同一张表，稍后由它接管 */
+    if (css) el.textContent = css;
+    document.head.appendChild(el);
+  } catch (err) { /* 无痕模式等：忽略，交给 theme.js */ }
+  setTimeout(function () { root.classList.remove('theme-boot'); }, 3000);   /* 兜底 */
+})();
+</script>
 </head>
 <body class="page settings-page">
 
@@ -456,9 +482,9 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="js/store.js?v=12"></script>
-<script src="js/theme.js?v=12"></script>
-<script src="js/settings.js?v=12"></script>
+<script src="js/store.js?v=13"></script>
+<script src="js/theme.js?v=13"></script>
+<script src="js/settings.js?v=13"></script>
 <script>
   /* 时间下拉框：0-23 点，动态生成，避免手写 48 个 option */
   (function () {

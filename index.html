@@ -7,8 +7,41 @@
 <meta name="description" content="可定制的个人主页：个人简介 / 自身技能 / 个人项目 / 联系方式 / 音乐播放器">
 <title>个人主页</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230071e3'/%3E%3Ccircle cx='16' cy='13' r='4.6' fill='%23fff'/%3E%3Cpath d='M7 27c1.4-4.6 5-7 9-7s7.6 2.4 9 7' fill='%23fff'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/theme.css?v=12">
-<link rel="stylesheet" href="css/main.css?v=12">
+<link rel="stylesheet" href="css/theme.css?v=13">
+<link rel="stylesheet" href="css/main.css?v=13">
+
+<!-- =========================================================================
+     首屏主题预置（必须内联、且放在样式表之后）
+     -------------------------------------------------------------------------
+     线上（GitHub Pages 有 CDN 延迟）时，JS 要几百毫秒才开始跑；
+     如果等 JS 再套用配色，浏览器会先按「默认配色」画一帧，
+     再花 620ms 过渡到你的预设 —— 看起来就像"主题被重置成原生预设又改回来"。
+     这段脚本同步读取 localStorage 里缓存的整套配色，在首次绘制前就贴上去。
+     ====================================================================== -->
+<script>
+(function () {
+  var root = document.documentElement;
+  root.classList.add('theme-boot');                 /* 启动期先别做令牌过渡 */
+  try {
+    var d = JSON.parse(localStorage.getItem('dsh.home.v1') || 'null');
+    var t = (d && d.theme) || {};
+    var theme = t.manual === 'dark' ? 'dark' : 'light';
+    if (t.mode === 'auto') {                        /* 跟随电脑时间：这里也先算一遍 */
+      var h = new Date().getHours();
+      var day = isNaN(+t.dayStart) ? 7 : +t.dayStart;
+      var night = isNaN(+t.nightStart) ? 19 : +t.nightStart;
+      theme = (h >= day && h < night) ? 'light' : 'dark';
+    }
+    root.setAttribute('data-theme', theme);
+    var css = localStorage.getItem('dsh.home.themecss.v1');
+    var el = document.createElement('style');
+    el.id = 'dsh-color-overrides';                  /* 与 theme.js 共用同一张表，稍后由它接管 */
+    if (css) el.textContent = css;
+    document.head.appendChild(el);
+  } catch (err) { /* 无痕模式等：忽略，交给 theme.js */ }
+  setTimeout(function () { root.classList.remove('theme-boot'); }, 3000);   /* 兜底 */
+})();
+</script>
 </head>
 <body class="page page--home">
 
@@ -178,8 +211,8 @@
 <!-- 轻提示 -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="js/store.js?v=12"></script>
-<script src="js/theme.js?v=12"></script>
-<script src="js/main.js?v=12"></script>
+<script src="js/store.js?v=13"></script>
+<script src="js/theme.js?v=13"></script>
+<script src="js/main.js?v=13"></script>
 </body>
 </html>

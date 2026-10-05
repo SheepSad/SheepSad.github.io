@@ -30,6 +30,10 @@
   ];
   const DEFAULT_ACCENT = '#0071e3';
 
+  /* 首屏预置脚本（index.html / settings.html 的 <head> 里那段内联 JS）读取的键名，
+     用来在首次绘制前就把上次算好的整套配色贴上，避免"先原生配色再渐变到预设"的闪回 */
+  const BOOT_CSS_KEY = 'dsh.home.themecss.v1';
+
   /* 作者原本的内置配色 —— ⚠️ 必须与 css/theme.css 里 --bg / --text 的默认值保持一致。
      `preset: 'native'` 时完全不注入样式，页面就长成作者写的那套新拟态皮肤。 */
   const NATIVE = {
@@ -235,17 +239,59 @@
   let colorStyleEl = null;
   function applyColorOverrides() {
     if (!colorStyleEl) {
-      colorStyleEl = document.createElement('style');
+      // 首屏预置脚本可能已经建好这张表（同一个 id），有就直接接管，避免两份规则打架
+      colorStyleEl = document.getElementById('dsh-color-overrides') || document.createElement('style');
       colorStyleEl.id = 'dsh-color-overrides';
-      document.head.appendChild(colorStyleEl);
+      if (!colorStyleEl.parentNode) document.head.appendChild(colorStyleEl);
     }
     const light = deriveTokens('light');
     const dark = deriveTokens('dark');
-    if (!light && !dark) { colorStyleEl.textContent = ''; return; }   // 原生：不覆盖任何令牌
     const decls = (map) => Object.keys(map).map((k) => k + ':' + map[k]).join(';');
-    colorStyleEl.textContent =
+    // 原生预设：注入表留空（完全不干预作者 CSS），但行内令牌（强调色/圆角/动效）仍要缓存
+    colorStyleEl.textContent = (!light && !dark) ? '' :
       (light ? ':root{' + decls(light) + '}\n' : '') +
       (dark ? '[data-theme="dark"]{' + decls(dark) + '}' : '');
+    cacheBootCss(colorStyleEl.textContent);
+  }
+
+  /* --------------------------------------------------------------------------
+   * 首屏配色缓存
+   * ---------------------------------------------------------------------------
+   * ★ 问题：样式表先按「默认（原生）配色」绘制，JS 跑完才换成预设配色 ——
+   *   线上（GitHub Pages 有 CDN 延迟）能看到"先原生蓝、再花 620ms 渐变到预设色"的闪回。
+   *   这里把每次算好的整套令牌缓存进 localStorage，
+   *   页面的 <head> 里有一小段内联脚本会在首次绘制前把它贴上去，于是根本没有闪回。
+   *
+   *   ⚠️ 强调色 / 圆角 / 动效时长是用「行内样式」写在 <html> 上的，不在注入表里，
+   *      所以缓存时必须一并快照，否则首屏会先闪一下默认蓝再跳到你的强调色。
+   *      又因为预置脚本与 theme.js 共用同一张 <style id="dsh-color-overrides">，
+   *      theme.js 每次重写它都会连快照一起覆盖，不会留下上一次的旧配色。
+   * ------------------------------------------------------------------------ */
+  function bootSnapshotCss(overrideCss) {
+    const t = store.get('theme') || {};
+    const decls = [];
+    const acc = String(t.accent || '').toLowerCase();
+    if (acc && acc !== DEFAULT_ACCENT) {
+      decls.push('--accent:' + t.accent);
+      decls.push('--accent-2:' + shiftHue(t.accent, 38));
+    }
+    decls.push('--radius:' + (Number(t.radius) || 0) + 'px');
+    if (t.motion) {
+      const dur = Number(t.duration) || 620;
+      decls.push('--dur:' + dur + 'ms');
+      decls.push('--dur-fast:' + Math.max(80, Math.round(dur * 0.36)) + 'ms');
+    }
+    return ':root{' + decls.join(';') + '}' + (overrideCss ? '\n' + overrideCss : '');
+  }
+  function cacheBootCss(overrideCss) {
+    try { window.localStorage.setItem(BOOT_CSS_KEY, bootSnapshotCss(overrideCss)); }
+    catch (err) { /* 无痕模式等：忽略 */ }
+  }
+
+  /** 启动期禁用「令牌过渡」：避免默认色→预设色被拉成一段缓慢的变色动画 */
+  function beginBoot() { document.documentElement.classList.add('theme-boot'); }
+  function endBoot() {
+    requestAnimationFrame(() => document.documentElement.classList.remove('theme-boot'));
   }
 
   /** 切换配色预设（设置页调用）：预设自带的强调色会一起套用 */
@@ -548,6 +594,8 @@
     followTime: followTime,
     applyTokens: applyTokens,
     applyPreset: applyPreset,
+    beginBoot: beginBoot,
+    endBoot: endBoot,
     getPreset: getPreset,
     get presetList() { return PRESETS; },
     get current() { return current; },

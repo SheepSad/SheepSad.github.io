@@ -802,9 +802,12 @@
 
     // ★ 线上部署：访客本地没有数据时，自动载入仓库里的 content.json
     store.loadSiteContent().then((seeded) => {
+      theme.endBoot();                       // 首屏配色已定，恢复主题过渡动画
       if (seeded) {
         syncFields(); renderAllLists(); updateStorage();
         toast('已载入站点预设内容 content.json');
+      } else if (store.isPristine()) {
+        toast('没找到 content.json，当前显示的是示例内容');
       }
       renderDeployState();
     });
