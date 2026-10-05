@@ -137,13 +137,13 @@
     ],
     "volume": 0.5,
     "autoplay": true,
-    "loop": "shuffle",
+    "loop": "list",
     "showLyrics": true,
     "emptyText": "还没有音乐 · 去设置里导入"
   },
   "ui": {
     "reveal": true
   },
-  "updatedAt": "2026-10-05T11:19:50.175Z",
+  "updatedAt": "2026-10-05T11:20:47.395Z",
   "note": "站点默认内容：由设置页「导出为站点默认内容」生成，提交到仓库根目录后线上访客自动载入"
 }
