@@ -575,7 +575,14 @@
     // 设置页修改了主题相关配置（或另一个标签页保存了数据）→ 立即重算
     store.on('change', () => {
       applyTokens();
-      if (store.get('theme').mode === 'auto') apply(store.resolveTheme(), { animate: true });
+      /* ★ 只要「按当前数据算出来的主题」和页面上现有的不一样就切过去。
+         以前这里写的是 `if (mode === 'auto')`，于是 content.json 装载后
+         把 mode 从 auto 改成 manual（或反过来）时不会重新应用 ——
+         典型症状：线上首次打开是「跟随电脑时间」算出来的主题（夜里就是黑夜），
+         装载完作者设定的「手动·白昼」后页面却仍然是黑的。
+         （首屏装载期间 html 上还挂着 theme-boot，令牌过渡是关掉的，所以这里是瞬间对齐、不会闪。） */
+      const want = store.resolveTheme();
+      if (want !== current) apply(want, { animate: true });
     });
 
     // 键盘快捷键：Shift + D 切换昼夜

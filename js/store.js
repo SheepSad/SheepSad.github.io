@@ -215,34 +215,20 @@
   }
 
   /* --------------------------------------------------------------------------
-   * 2.95 重新装载 content.json 时，要保住访客自己改过的「个性化偏好」
+   * 2.95 装载 content.json 的优先级（这一块改过两版，最终定成下面这样）
    * ---------------------------------------------------------------------------
-   * ★ 踩过的坑：作者重新导出 content.json（updatedAt 变了）之后，
-   *   访客再打开页面就会整份重新装载，连带把 theme / 循环模式 / 音量
-   *   一起顶回仓库里的值 —— 表现就是"在设置里改的循环模式，一回主页就被刷新"。
-   *   做法：每次装载时记下当时的偏好快照；下次装载时逐项比对，
-   *   本地值和快照不一样 → 说明访客自己动过 → 保留访客的；
-   *   一样 → 访客没动过 → 跟随 content.json（作者更新主题仍然能推送给访客）。
+   * 规则只有一条：**版本号（updatedAt）变了 = 作者发布了新的默认值，整份生效；
+   *               版本号没变 = 不动本地，访客自己在设置里改的东西都保留。**
+   *
+   * ★ 曾经为了"保住访客改过的偏好"，在版本变化时也把本地的 theme / music.loop
+   *   顶回去，结果是：作者把 content.json 里的循环模式设成「列表循环」重新导出，
+   *   自己浏览器里却仍然是「随机播放」（本地值赢了），看起来像导出没生效。
+   *   个人主页的默认值是作者用 content.json 发布的，重新导出就该覆盖旧的本地值，
+   *   所以这里不做偏好保留 —— 靠"版本号没变就不重新装载"来保证日常导航不被打断。
    * ------------------------------------------------------------------------ */
-  const PREF_PATHS = ['theme', 'ui', 'music.loop', 'music.volume', 'music.autoplay', 'music.showLyrics'];
-  const sameValue = (a, b) => { try { return JSON.stringify(a) === JSON.stringify(b); } catch (err) { return a === b; } };
-
-  /** 偏好快照（拍平成「路径 → 值」，不依赖 setPath 建中间层） */
-  function prefSnapshot(d) {
-    const flat = {};
-    PREF_PATHS.forEach((p) => { flat[p] = getPath(d, p); });
-    return flat;
-  }
-  /** 把访客改过的偏好搬回即将装载的数据上 */
-  function keepVisitorPrefs(incoming, local, seeded) {
-    if (!seeded) return incoming;                       // 没有快照（首次装载）→ 整份采用 content.json
-    PREF_PATHS.forEach((p) => {
-      const localVal = getPath(local, p);
-      if (localVal === undefined) return;
-      if (sameValue(localVal, seeded[p])) return;       // 访客没动过 → 跟随 content.json
-      setPath(incoming, p, localVal);                   // 访客动过 → 保留访客的
-    });
-    return incoming;
+  /** 版本号统一化：没有 updatedAt/exportedAt 时视为 'unknown'，避免每次都重新装载 */
+  function contentStamp(json) {
+    return String((json && (json.updatedAt || json.exportedAt)) || 'unknown');
   }
   /**
    * 更宽松的「这份数据还没被认领」判断：姓名还是占位名、没有头像/简介/联系方式/曲库。
@@ -487,18 +473,14 @@
       writeMeta(this.meta);
     },
 
-    /** 把一份站点内容写入本地（不算"访客修改"） */
+    /** 把一份站点内容写入本地（不算"访客修改"）；作者的默认值整份生效 */
     applySiteContent(json) {
-      const incoming = buildData(json);
-      const seeded = this.meta && this.meta.seededPrefs;
-      keepVisitorPrefs(incoming, this.data, seeded);     // 访客自己改过的偏好不被顶掉
-      this.data = incoming;
+      this.data = buildData(json);
       writeLS(this.data);
       this.hasSaved = true;
       this.meta = readMeta();
       this.meta.dirty = false;
-      this.meta.seededAt = json.updatedAt || json.exportedAt || 'unknown';
-      this.meta.seededPrefs = prefSnapshot(this.data);   // 记下本次装载时的偏好，供下次比对
+      this.meta.seededAt = contentStamp(json);
       writeMeta(this.meta);
       this.emit('change', this.data);
       return this.data;
@@ -525,9 +507,15 @@
           writeMeta(this.meta);
         }
         if (!force && this.hasSaved && this.meta.dirty) return null;   // 访客确实改过内容，不覆盖
-        const stamp = json.updatedAt || json.exportedAt || '';
-        // 已有本地数据、且就是同一版本 → 不必重载
-        if (!force && this.hasSaved && stamp && stamp === this.meta.seededAt) return null;
+        /* 版本号没变 → 不重新装载。
+           这样日常在主页/设置页之间来回走、刷新页面，都不会动访客（或作者自己）在设置里
+           改过的循环模式、主题等；只有 content.json 重新导出（updatedAt 变化）时，
+           作者的默认值才会整份生效。
+           注：content.json 若完全没有 updatedAt/exportedAt（等于没有更新信号），
+           装载一次之后就不再重复装载，避免每次刷新都把本地改动冲掉。 */
+        const stamp = contentStamp(json);
+        const sameVersion = stamp === 'unknown' ? true : stamp === String(this.meta.seededAt || '');
+        if (!force && this.hasSaved && sameVersion) return null;
         return this.applySiteContent(json);
       } catch (err) {
         // 没有 content.json（404）或跨域失败都属正常，静默忽略

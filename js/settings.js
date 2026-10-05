@@ -661,7 +661,9 @@
         : 'content.json 已导出，提交到仓库根目录即可');
     });
 
-    /* 重新载入仓库里的 content.json（作者更新线上内容后用） */
+    /* 重新载入仓库里的 content.json（作者更新线上内容后用）
+       force 会忽略 dirty 与版本号，把 content.json 整份套用 —— 包括它里面的
+       循环模式、主题等默认值，也就是「把我自己浏览器里的个性化改动也一起恢复成默认」。 */
     const reloadSite = $('#reloadSiteBtn');
     if (reloadSite) reloadSite.addEventListener('click', async () => {
       reloadSite.disabled = true;
@@ -669,7 +671,7 @@
       reloadSite.disabled = false;
       if (seeded) {
         syncFields(); renderAllLists(); updateStorage();
-        toast('已重新载入站点内容 content.json');
+        toast('已按 content.json 恢复默认（含循环模式、主题）');
       } else {
         toast('没有找到 content.json，或当前是 file:// 直接打开');
       }

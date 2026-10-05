@@ -7,5 +7,5 @@
  * （GitHub Pages 的 HTML 默认缓存 10 分钟，浏览器可能更久；Ctrl+F5 可强制刷新）。
  * ------------------------------------------------------------------------- */
 window.DSH = window.DSH || {};
-window.DSH.version = 'v16 · 2026-10-05 · 随机播放（洗牌袋）+ 偏好保留 + 首屏配色';
+window.DSH.version = 'v17 · 2026-10-05 · 默认列表循环 + 洗牌袋随机 + 音源自动寻址';
 try { console.info('[DSH] 前端版本 ' + window.DSH.version); } catch (err) { /* 忽略 */ }
