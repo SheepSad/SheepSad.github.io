@@ -396,7 +396,13 @@
      *   独立取随机数时，5 首歌里连着抽到同一首的概率并不低，
      *   听起来就像"根本没随机"；洗牌袋保证一轮里每首都放到，且不会马上重复。
      * ---------------------------------------------------------------------- */
-    isShuffle() { return String(store.get('music.loop') || 'list') === 'shuffle'; },
+    /* ⚠️ 宽容一点：除了 'shuffle'，也认 'random' / '随机' 这类写法。
+       以前的版本、或者手工改过的 content.json / localStorage 里出现过别的写法，
+       一旦认不出来就会静默退回"按列表顺序播放" —— 那正是"随机播放不随机"的表象。 */
+    isShuffle() {
+      const m = String(store.get('music.loop') || 'list').toLowerCase();
+      return m === 'shuffle' || m === 'random' || m === '随机' || m === '随机播放';
+    },
 
     /** 洗一袋「除当前曲之外的其余曲目」（Fisher–Yates） */
     fillShuffleBag(exclude) {

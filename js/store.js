@@ -300,6 +300,10 @@
     if (LEGACY_ACCENTS.indexOf(String(t.accent).toLowerCase()) >= 0) t.accent = defaultData().theme.accent;
     delete t.blur;                                  // 「毛玻璃强度」设置已下线，--blur 改为 CSS 固定值
 
+    // 循环模式归一化：老版本 / 手改过的 content.json 里可能是别的写法，
+    // 认不出来就会静默变成"按列表顺序播放"，所以在这里统一成 list / single / shuffle
+    if (data && data.music) data.music.loop = normalizeLoop(data.music.loop);
+
     /* 早期版本用过 theme.textColor / theme.bgColor 这种「白天黑夜手动二选一」的写法，
        现在改为「配色预设」。若用户当时确实改过颜色，就把那套颜色平移成 custom 预设，
        没改过的直接回落到原生新拟态配色。 */
@@ -330,6 +334,22 @@
   /** 所有数据都必须经过这里：合并默认值 → 迁移 → 交给页面 */
   function buildData(raw) {
     return migrate(mergeDeep(defaultData(), raw));
+  }
+
+  /* 循环模式的合法取值；别的写法（老版本、手改过的 content.json）一律归一化，
+     否则播放器认不出来就会静默退回"按列表顺序播放"。 */
+  const LOOP_ALIASES = {
+    shuffle: 'shuffle', random: 'shuffle', '随机': 'shuffle', '随机播放': 'shuffle',
+    single: 'single', one: 'single', '单曲': 'single', '单曲循环': 'single',
+    list: 'list', loop: 'list', all: 'list', '列表': 'list', '列表循环': 'list'
+  };
+  function normalizeLoop(v) {
+    const m = String(v === undefined || v === null ? '' : v).trim().toLowerCase();
+    return LOOP_ALIASES[m] || 'list';
+  }
+  /** 写入时就把已知的枚举值归一化（目前只有循环模式），保证存下来和导出的都是规范值 */
+  function coerceValue(path, value) {
+    return path === 'music.loop' ? normalizeLoop(value) : value;
   }
 
   /* --------------------------------------------------------------------------
@@ -528,7 +548,7 @@
     get(path) { return path ? getPath(this.data, path) : this.data; },
 
     set(path, value) {
-      setPath(this.data, path, value);
+      setPath(this.data, path, coerceValue(path, value));
       if (isContentPath(path)) this.markEdited();      // 主题/播放偏好不算改过内容
       this.save();
       this.emit('change', this.data);
@@ -547,7 +567,7 @@
 
     /** 合并式写入一组 { path: value } */
     patch(pairs) {
-      Object.keys(pairs).forEach((p) => setPath(this.data, p, pairs[p]));
+      Object.keys(pairs).forEach((p) => setPath(this.data, p, coerceValue(p, pairs[p])));
       if (Object.keys(pairs).some(isContentPath)) this.markEdited();
       this.save();
       this.emit('change', this.data);
