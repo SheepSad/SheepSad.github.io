@@ -1,12 +1,12 @@
 {
   "version": 1,
   "theme": {
-    "mode": "manual",
+    "mode": "auto",
     "manual": "light",
-    "dayStart": 7,
-    "nightStart": 19,
+    "dayStart": "6",
+    "nightStart": "20",
     "accent": "#8e8e93",
-    "radius": 18,
+    "radius": 30,
     "preset": "apple",
     "customColor": {
       "light": {
@@ -20,7 +20,7 @@
     },
     "motion": true,
     "duration": 880,
-    "effect": "wipe"
+    "effect": "ripple"
   },
   "profile": {
     "name": "SadSheep",
@@ -35,21 +35,21 @@
       "id": "sk_muqmnbkxjzb2y",
       "title": "Python",
       "desc": "游戏设计开发",
-      "size": "normal",
+      "size": "wide",
       "level": 50
     },
     {
       "id": "sk_muqmnki010yva",
       "title": "C/C++",
       "desc": "单片机基础语言",
-      "size": "normal",
+      "size": "wide",
       "level": 35
     },
     {
       "id": "s3",
       "title": "UI 设计",
       "desc": "风格多变，涉猎较广",
-      "size": "normal",
+      "size": "wide",
       "level": 50
     },
     {
@@ -137,13 +137,13 @@
     ],
     "volume": 0.5,
     "autoplay": true,
-    "loop": "list",
+    "loop": "shuffle",
     "showLyrics": true,
     "emptyText": "还没有音乐 · 去设置里导入"
   },
   "ui": {
     "reveal": true
   },
-  "updatedAt": "2026-10-05T10:33:04.365Z",
+  "updatedAt": "2026-10-05T11:19:50.175Z",
   "note": "站点默认内容：由设置页「导出为站点默认内容」生成，提交到仓库根目录后线上访客自动载入"
 }
