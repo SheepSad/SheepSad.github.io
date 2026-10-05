@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#eef1f8" id="metaTheme">
+<meta name="theme-color" content="#f5f5f7" id="metaTheme">
 <title>设置 · 个人主页</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%235b7cfa'/%3E%3Cpath d='M16 8.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11zm0 14.2c-4 0-7.5 2.2-9 5.3h18c-1.5-3.1-5-5.3-9-5.3z' fill='%23fff'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/theme.css?v=2">
-<link rel="stylesheet" href="css/settings.css?v=2">
+<link rel="stylesheet" href="css/theme.css?v=12">
+<link rel="stylesheet" href="css/settings.css?v=12">
 </head>
 <body class="page settings-page">
 
@@ -160,22 +160,60 @@
       <div class="s-group">
         <h3 class="s-group__title">视觉细节</h3>
         <div class="field">
-          <label class="field__label">强调色</label>
+          <label class="field__label">强调色
+            <span class="field__hint">（含苹果的石墨灰 / 银白，想要整页灰白就选它们）</span>
+          </label>
           <div class="color-dots" id="accentDots"></div>
-          <div class="inline-row" style="margin-top:10px">
+          <div class="inline-row" style="margin-top:12px">
+            <span class="field__hint" style="margin:0">自定义</span>
             <input class="color-input" type="color" id="accentPicker" data-path="theme.accent" aria-label="自定义强调色">
-            <span class="field__hint">渐变色由强调色自动推导，整站按钮、光斑、进度条会一起变化</span>
+            <span class="field__hint">装饰光斑、按钮、进度条、渐变都会跟着强调色一起变</span>
           </div>
         </div>
 
         <div class="form-grid">
+          <!-- 配色预设：一套预设同时定义白天与黑夜两套主题 -->
+          <div class="field field--full">
+            <label class="field__label">配色预设
+              <span class="field__hint">（每套都自带白天 + 黑夜两种底色的写法，并配套强调色）</span>
+            </label>
+            <div class="preset-grid" id="presetGrid"></div>
+          </div>
+
+          <!-- 自定义：只有选了「自定义」预设才生效 -->
+          <div class="field field--full" id="customColorField">
+            <label class="field__label">自定义颜色
+              <span class="field__hint">（改动任意一项会自动切到「自定义」预设）</span>
+            </label>
+            <div class="color-pair">
+              <span class="color-pair__label">背景</span>
+              <label class="color-chip" title="自定义预设 · 白天背景色">
+                <input type="color" data-path="theme.customColor.light.bg" aria-label="白天背景颜色">
+                <span class="color-chip__name">☀ 白天</span>
+              </label>
+              <label class="color-chip" title="自定义预设 · 黑夜背景色">
+                <input type="color" data-path="theme.customColor.dark.bg" aria-label="黑夜背景颜色">
+                <span class="color-chip__name">☾ 黑夜</span>
+              </label>
+            </div>
+            <div class="color-pair" style="margin-top:10px">
+              <span class="color-pair__label">文字</span>
+              <label class="color-chip" title="自定义预设 · 白天文字色">
+                <input type="color" data-path="theme.customColor.light.text" aria-label="白天文字颜色">
+                <span class="color-chip__name">☀ 白天</span>
+              </label>
+              <label class="color-chip" title="自定义预设 · 黑夜文字色">
+                <input type="color" data-path="theme.customColor.dark.text" aria-label="黑夜文字颜色">
+                <span class="color-chip__name">☾ 黑夜</span>
+              </label>
+              <button class="btn btn--sm btn--ghost color-pair__reset" type="button" id="customColorReset">恢复原生配色</button>
+            </div>
+            <p class="field__hint">新拟态要求「表面色 = 背景色」，所以换底色时卡片、凹槽、边框与明暗阴影都会自动跟着重新推导，不用手动调。</p>
+          </div>
+
           <div class="field">
             <label class="field__label">圆角大小 <span class="field__hint">（像素）</span></label>
             <input class="range" type="range" min="0" max="36" step="1" data-path="theme.radius">
-          </div>
-          <div class="field">
-            <label class="field__label">毛玻璃强度 <span class="field__hint">（模糊半径）</span></label>
-            <input class="range" type="range" min="0" max="40" step="1" data-path="theme.blur">
           </div>
           <div class="field">
             <label class="field__label">切换动效时长 <span class="field__hint">（毫秒）</span></label>
@@ -418,9 +456,9 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="js/store.js?v=2"></script>
-<script src="js/theme.js?v=2"></script>
-<script src="js/settings.js?v=2"></script>
+<script src="js/store.js?v=12"></script>
+<script src="js/theme.js?v=12"></script>
+<script src="js/settings.js?v=12"></script>
 <script>
   /* 时间下拉框：0-23 点，动态生成，避免手写 48 个 option */
   (function () {
