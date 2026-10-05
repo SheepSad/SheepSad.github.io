@@ -1,6 +1,11 @@
 /* ============================================================================
  * main.css —— 个人主页布局
  * ----------------------------------------------------------------------------
+ * ★ 视觉语言：Neumorphism（新拟态）× Apple Design
+ *   与 theme.css 配合：所有立体感都来自 --nm-raised / --nm-inset 两套阴影。
+ *     · 凸起 = 从背景里「长」出来 → 卡片、按钮、头像
+ *     · 凹陷 = 被按进背景里     → 输入框、滑杆轨道、播放器内部、按下的状态
+ *
  * ★★★ 网格合并（Grid Merge）速查 —— 本文件所有排版都由 CSS Grid 完成 ★★★
  *
  *   ① 命名区域合并：grid-template-areas 中同名的字符串会被合并成一整块区域，
@@ -27,7 +32,7 @@
 .page {
   position: relative;
   min-height: 100vh;
-  padding: 24px 0 56px;
+  padding: 26px 0 60px;
 }
 
 .shell {
@@ -38,9 +43,9 @@
 
   display: grid;
   /* ① 命名区域合并：两列 + 两个区域名 */
-  grid-template-columns: 330px minmax(0, 1fr);
+  grid-template-columns: 340px minmax(0, 1fr);
   grid-template-areas: "sidebar content";
-  gap: 22px;
+  gap: 24px;
   align-items: start;
 }
 
@@ -50,17 +55,27 @@
 .sidebar {
   grid-area: sidebar;             /* ① 直接引用命名区域，等价于 grid-column:1 / grid-row:1 */
   position: sticky;
-  top: 24px;
+  top: 26px;
   display: grid;
-  gap: 14px;
-  max-height: calc(100vh - 48px);
+  gap: 16px;
+  /* ★ 这里绝对不能裁剪：卡片是「表面色 = 背景色」的新拟态，
+     形状完全靠左上高光 + 右下阴影描出来。
+     一旦父级是滚动容器（overflow: auto/hidden），卡片与父级同宽同时贴边，
+     左上高光会被整条切掉（圆角看起来就"没了"），右下阴影也只剩一条硬边。
+     所以滚动交给卡片自己（元素自身的 overflow 不会裁掉自己的 box-shadow）。 */
+  overflow: visible;
+}
+
+/* 侧栏主面板：整块凸起的新拟态「托盘」 */
+.sidebar__card {
+  padding: 22px 20px;
+  max-height: calc(100vh - 52px);   /* 超高时在卡片内部滚动，见上方说明 */
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 2px;
+  /* 滚动条收进圆角内，避免压住右侧的圆角与阴影 */
+  scrollbar-gutter: stable;
 }
-.sidebar::-webkit-scrollbar { width: 5px; }
-
-.sidebar__card { padding: 18px; }
+.sidebar__card::-webkit-scrollbar { width: 5px; }
 
 /* 左上角工具条：设置按钮 + 昼夜切换按钮 */
 .sidebar__top {
@@ -68,12 +83,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
-.sidebar__tools { display: flex; gap: 8px; }
+.sidebar__tools { display: flex; gap: 10px; }
 
 /* ---------------------------------------------------------------------------
  * 3. 圆形头像 + 姓名
+ *    头像 = 凸起的圆盘；外圈光环 = 缓慢旋转的强调色细环（苹果式克制）
  * ------------------------------------------------------------------------- */
 .profile { display: grid; justify-items: center; text-align: center; gap: 4px; }
 
@@ -84,41 +100,52 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  margin-bottom: 10px;
-  background: var(--bg-2);
-  box-shadow: 0 20px 40px -26px var(--shadow);
+  margin-bottom: 14px;
+  background: var(--surface);
+  /* 头像凸起得比卡片更明显：偏移量与模糊放大，形成「主角」层级 */
+  box-shadow:
+    -8px -8px 20px var(--sh-light),
+    8px 8px 20px var(--sh-dark);
+  transition: box-shadow var(--dur-fast) var(--ease), transform 420ms var(--spring);
 }
 .avatar img {
   width: 100%; height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  background: linear-gradient(135deg, var(--accent-soft), var(--surface-2));
+  background: var(--surface-2);
   transition: transform 620ms var(--ease-out);
 }
 .avatar:hover img { transform: scale(1.05); }
-/* 头像外圈的渐变光环：用 conic-gradient + mask 抠出圆环 */
+.avatar:hover {
+  box-shadow:
+    -10px -10px 24px var(--sh-light),
+    10px 10px 24px var(--sh-dark);
+}
+/* 头像外圈的渐变光环：用 conic-gradient + mask 抠出细圆环，缓慢旋转 */
 .avatar__ring {
   position: absolute;
-  inset: -5px;
+  inset: -4px;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, var(--accent), var(--accent-2), var(--accent));
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  background: conic-gradient(from 0deg, transparent 0deg, var(--accent) 120deg, var(--accent-2) 220deg, transparent 340deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
   animation: spin 9s linear infinite;
-  opacity: .9;
+  opacity: .85;
+  pointer-events: none;
 }
 .avatar__fallback {
-  font-size: 34px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--accent);
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  color: var(--accent-ink);            /* 无头像时的首字母：低饱和预设下也保持可读 */
 }
 
+/* 姓名层级：苹果式的字号/字重对比 —— 名字重、头衔轻、座右铭是胶囊标签 */
 .profile__name {
-  font-size: 21px;
-  font-weight: 700;
-  letter-spacing: .4px;
-  line-height: 1.35;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -.02em;      /* 大字号收紧字距，是苹果排版的标志性手法 */
+  line-height: 1.3;
   word-break: break-word;
 }
 .profile__title {
@@ -127,9 +154,11 @@
   line-height: 1.6;
 }
 .profile__motto {
-  margin-top: 6px;
-  padding: 5px 12px;
+  margin-top: 8px;
+  padding: 5px 14px;
   font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -.005em;
   color: var(--accent);
   background: var(--accent-soft);
   border-radius: 999px;
@@ -138,34 +167,72 @@
 
 /* ---------------------------------------------------------------------------
  * 4. 音乐播放器
+ *    整体做成「凹陷的机身」，里面的控件再凸起来 —— 这是新拟态最出效果的组合，
+ *    也天然符合苹果「内容沉入、控件浮起」的物理隐喻。
  * ------------------------------------------------------------------------- */
 .player {
-  padding: 14px;
-  border-radius: calc(var(--radius) * .8);
+  margin-top: 18px;                    /* 与上方「姓名 + 头衔」拉开正常的呼吸间距 */
+  padding: 16px;
+  border-radius: calc(var(--radius) * .85);
   background: var(--surface-2);
-  border: 1px solid var(--border);
-  backdrop-filter: blur(calc(var(--blur) * .8)) saturate(150%);
-  -webkit-backdrop-filter: blur(calc(var(--blur) * .8)) saturate(150%);
+  border: 1px solid transparent;
+  box-shadow: var(--nm-inset);
 }
 
-.player__head { display: grid; grid-template-columns: 52px minmax(0, 1fr) 34px; gap: 10px; align-items: center; }
+.player__head { display: grid; grid-template-columns: 54px minmax(0, 1fr) 34px 34px; gap: 9px; align-items: center; }
 
-/* 唱片：播放时旋转 */
+/* 唱片：彩色胶皮唱片（不是头像照片）——
+   底色取自强调色，叠一层音槽纹路与一道缓慢旋转的高光，播放时整张唱片转起来。
+   旋转靠 .disc.is-playing 的 spin 动画；纹路本身是同心圆，靠高光才能看出在转。 */
 .disc {
   position: relative;
-  width: 52px; height: 52px;
+  width: 54px; height: 54px;
   border-radius: 50%;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
   display: grid;
   place-items: center;
-  box-shadow: 0 10px 22px -14px var(--accent);
+  /* 唱片本体：中心略深、外圈稍亮，做出黑胶那种厚度感 */
+  background:
+    radial-gradient(circle at 50% 50%,
+      color-mix(in oklab, var(--accent) 78%, #000) 0 30%,
+      var(--accent) 31% 68%,
+      color-mix(in oklab, var(--accent) 88%, #000) 69% 100%);
+  box-shadow: var(--nm-raised-sm);
 }
-.disc img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.disc__hole {
+/* 音槽 + 高光：两层背景叠在一张图上 */
+.disc__grooves {
   position: absolute; inset: 0;
   border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in oklab, var(--bg) 90%, transparent) 0 16%, transparent 17%);
+  background-image:
+    /* 旋转时看得见的那道反光 */
+    conic-gradient(from 0deg,
+      rgba(255, 255, 255, .26) 0deg, rgba(255, 255, 255, 0) 62deg,
+      rgba(255, 255, 255, .18) 180deg, rgba(255, 255, 255, 0) 248deg,
+      rgba(255, 255, 255, .26) 360deg),
+    /* 等距细圆环 = 唱片音槽 */
+    repeating-radial-gradient(circle at 50% 50%,
+      rgba(255, 255, 255, .16) 0 .6px, rgba(0, 0, 0, .12) .6px 1.2px, transparent 1.2px 3px);
+  opacity: .85;
+  pointer-events: none;
+}
+/* 中心圆标：像唱片的纸质标签，用强调色调浅一档 */
+.disc__label {
+  position: absolute;
+  width: 40%; height: 40%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%,
+    color-mix(in oklab, var(--accent) 30%, #fff) 0 62%,
+    color-mix(in oklab, var(--accent) 58%, #fff) 63% 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5), 0 0 4px rgba(0, 0, 0, .25);
+  pointer-events: none;
+}
+/* 中心轴孔 */
+.disc__hole {
+  position: relative;
+  width: 12%; height: 12%;
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .45);
   pointer-events: none;
 }
 .disc.is-playing { animation: spin 6s linear infinite; }
@@ -174,6 +241,7 @@
 .player__song {
   font-size: 13.5px;
   font-weight: 600;
+  letter-spacing: -.01em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .player__artist {
@@ -182,10 +250,10 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-.player__progress { margin: 12px 0 8px; }
+.player__progress { margin: 14px 0 10px; }
 .player__time {
   display: flex; justify-content: space-between;
-  margin-top: 5px;
+  margin-top: 6px;
   font-size: 10.5px;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
@@ -194,41 +262,52 @@
 .player__controls {
   display: grid;
   grid-template-columns: auto auto auto minmax(0, 1fr);  /* ② 四列：三个按钮 + 音量自适应 */
-  gap: 8px;
+  gap: 10px;
   align-items: center;
 }
+
+/* 播放控件：凸起的圆钮，按下时凹下去 */
 .ctrl {
   display: grid; place-items: center;
-  width: 34px; height: 34px;
+  width: 36px; height: 36px;
   border-radius: 50%;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  transition: transform var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+  box-shadow: var(--nm-raised-sm);
+  transition:
+    transform var(--dur-fast) var(--spring),
+    box-shadow var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
 }
-.ctrl:hover { transform: scale(1.08); color: var(--accent); border-color: var(--accent-line); }
-.ctrl:active { transform: scale(.94); }
+.ctrl:hover { color: var(--accent); border-color: var(--accent-line); transform: translateY(-1px); }
+.ctrl:active { transform: scale(.94); box-shadow: var(--nm-inset); }
 .ctrl svg { width: 16px; height: 16px; }
+
+/* 主播放键：苹果式实心强调色圆形，是整页唯一「高饱和」的焦点 */
 .ctrl--main {
-  width: 42px; height: 42px;
+  width: 44px; height: 44px;
   color: #fff;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  background: var(--accent);
   border-color: transparent;
-  box-shadow: 0 12px 24px -14px var(--accent);
+  box-shadow: 0 8px 18px -6px color-mix(in oklab, var(--accent) 62%, transparent);
 }
+.ctrl--main:hover { color: #fff; background: color-mix(in oklab, var(--accent) 88%, #000); }
+.ctrl--main:active { box-shadow: var(--nm-inset); }
 .ctrl--main svg { width: 18px; height: 18px; }
 .ctrl--main.is-playing { animation: pulse 2.4s var(--ease) infinite; }
 
-.player__volume { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 7px; align-items: center; }
+.player__volume { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 8px; align-items: center; }
 .player__volume svg { width: 14px; height: 14px; color: var(--muted); }
 
-/* 播放列表抽屉 */
+/* 播放列表抽屉：内部条目用凹陷高亮表示当前曲 */
 .playlist {
-  margin-top: 10px;
+  margin-top: 12px;
   max-height: 168px;
   overflow-y: auto;
-  border-top: 1px dashed var(--border);
-  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
   display: grid;
   gap: 2px;
 }
@@ -238,28 +317,35 @@
   grid-template-columns: 18px minmax(0, 1fr) auto;   /* ② 序号 / 标题 / 时长 */
   gap: 8px;
   align-items: center;
-  padding: 7px 8px;
-  border-radius: 9px;
+  padding: 8px 10px;
+  border-radius: 12px;
   font-size: 12.5px;
   color: var(--muted);
   cursor: pointer;
-  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
+              box-shadow var(--dur-fast) var(--ease), transform var(--dur-fast) var(--spring);
 }
-.playlist__item:hover { background: var(--accent-soft); color: var(--text); }
-.playlist__item.is-active { color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.playlist__item:hover { color: var(--text); background: var(--surface); box-shadow: var(--nm-raised-sm); }
+.playlist__item.is-active {
+  color: var(--accent);
+  font-weight: 600;
+  background: var(--surface-2);
+  box-shadow: var(--nm-inset);
+}
 .playlist__no { font-variant-numeric: tabular-nums; opacity: .7; }
 .playlist__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.playlist__empty { padding: 14px 6px; font-size: 12px; color: var(--muted); text-align: center; line-height: 1.8; }
+.playlist__empty { padding: 16px 6px; font-size: 12px; color: var(--muted); text-align: center; line-height: 1.8; }
 
 /* ---------------------------------------------------------------------------
  * 5. 歌词浮层（播放器下方浮现）
  * ------------------------------------------------------------------------- */
 .lyrics {
-  margin-top: 10px;
-  padding: 12px 14px;
-  border-radius: calc(var(--radius) * .8);
-  background: linear-gradient(180deg, var(--surface-2), transparent);
-  border: 1px solid var(--border);
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: calc(var(--radius) * .85);
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  box-shadow: var(--nm-inset);
   overflow: hidden;
 }
 .lyrics__head {
@@ -269,10 +355,13 @@
 }
 .lyrics__viewport {
   position: relative;
-  height: 100px;                       /* 固定 3 行高度：上下两端做淡出遮罩 */
+  height: 84px;                        /* 两行完整（33×2）+ 一小截虚化的第三行，比原来更矮 */
+  --lyric-top-pad: 0px;                /* ★ 正在唱的那句贴在顶部：上一句顺势被裁到视口外，等于隐藏 */
   overflow: hidden;
-  mask-image: linear-gradient(180deg, transparent 0, #000 26%, #000 74%, transparent 100%);
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 26%, #000 74%, transparent 100%);
+  /* 顶部不淡出（当前句必须 100% 清晰），底部最后 20% 渐隐：
+     只有第三行及以后才被虚化 */
+  mask-image: linear-gradient(180deg, #000 0, #000 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 80%, transparent 100%);
 }
 .lyrics__track {
   position: absolute;
@@ -284,25 +373,39 @@
   height: 33px;
   line-height: 33px;
   font-size: 13px;
-  color: var(--muted);
-  opacity: .38;
-  filter: blur(.6px);
+  letter-spacing: -.01em;
+  color: var(--accent);                /* ★ 所有歌词统一使用强调色 */
+  /* 其余歌词：靠透明度与模糊退到后面，不再改颜色 */
+  opacity: .3;
+  filter: blur(1px);
   text-align: center;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   transform: scale(.94);
   transition: opacity 460ms var(--ease), transform 460ms var(--ease-out), filter 460ms var(--ease), color 460ms var(--ease);
 }
-.lyric-line.is-near { opacity: .6; filter: blur(.2px); transform: scale(.97); }
+/* 下一句（很多歌词这里是翻译行）：同色、完整清晰，靠字重与当前句拉开层次 */
+.lyric-line.is-next {
+  opacity: 1;
+  filter: none;
+  transform: scale(1);
+}
+/* 上一句：直接隐藏（它同时也在视口外，双保险） */
+.lyric-line.is-prev {
+  opacity: 0;
+  filter: blur(2px);
+  transform: scale(.92);
+}
+/* 正在播放的那句：强调色 + 加粗，是全栏唯一的重点 */
 .lyric-line.is-active {
   opacity: 1;
   filter: none;
   transform: scale(1.04);
   color: var(--accent);
-  font-weight: 700;
+  font-weight: 650;
 }
 .lyric-empty {
   display: grid; place-items: center;
-  height: 100px;
+  height: 84px;                        /* 与 .lyrics__viewport 保持一致 */
   font-size: 12px;
   color: var(--muted);
   text-align: center;
@@ -316,28 +419,30 @@
 .content {
   grid-area: content;              /* ① 命名区域合并的第二块 */
   display: grid;
-  gap: 20px;
+  gap: 22px;
   min-width: 0;
 }
 
-.section { padding: 24px 26px; }
+/* 板块 = 凸起的新拟态大面板 */
+.section { padding: 26px 28px; }
 
 .section__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 .section__title {
-  display: flex; align-items: center; gap: 10px;
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: .3px;
+  display: flex; align-items: center; gap: 11px;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -.02em;
 }
+/* 标题前的小圆点：苹果式的强调色指示，带柔和光晕 */
 .section__title .dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--accent);
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
 .section__en {
@@ -346,14 +451,14 @@
   text-transform: uppercase;
   color: var(--muted);
 }
-.section__actions { display: flex; align-items: center; gap: 8px; }
+.section__actions { display: flex; align-items: center; gap: 10px; }
 
 /* 6.1 个人简介：普通文本排版（不使用卡片/标签） */
 .bio {
   position: relative;
-  padding-left: 16px;
+  padding-left: 18px;
   font-size: 15px;
-  line-height: 2;
+  line-height: 1.9;
   color: var(--text);
   white-space: pre-wrap;         /* 保留用户在设置里输入的换行 */
   word-break: break-word;
@@ -361,34 +466,43 @@
 .bio::before {
   content: "";
   position: absolute;
-  left: 0; top: 6px; bottom: 6px;
+  left: 0; top: 4px; bottom: 4px;
   width: 3px;
   border-radius: 999px;
-  background: linear-gradient(180deg, var(--accent), var(--accent-2));
-  opacity: .85;
+  background: var(--accent);
+  opacity: .8;
 }
 .bio.is-empty { color: var(--muted); font-style: italic; }
-.bio__meta { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+.bio__meta { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 12px;
+  padding: 6px 13px;
   font-size: 12px;
+  font-weight: 500;
   color: var(--muted);
   border-radius: 999px;
-  background: var(--surface-2);
+  background: var(--surface);
   border: 1px solid var(--border);
+  box-shadow: var(--nm-raised-sm);
+  transition: color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
+.chip:hover { color: var(--accent-ink); }
+.chip:active { box-shadow: var(--nm-inset); }
 .chip svg { width: 13px; height: 13px; }
 
 /* ---------------------------------------------------------------------------
- * 7. 自身技能：毛玻璃卡片网格 —— 含网格合并
+ * 7. 自身技能：新拟态卡片网格 —— 含网格合并
  * ------------------------------------------------------------------------- */
 .skills-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  grid-auto-rows: 120px;         /* 统一行高，让跨行合并的高度可预期 */
+  /* 统一行高，让跨行合并的高度可预期。
+     124px 而不是 120px：标题(1 行) + 描述(2 行) + 熟练度条 + 百分比，
+     再加上 6px 的凹槽进度条，需要约 91px 的内高，192→留出 3px 余量，
+     否则第二行描述会被容器裁掉半个字。 */
+  grid-auto-rows: 124px;
   grid-auto-flow: dense;         /* ⑥ dense 回填：合并留下的空洞由后续卡片补上 */
-  gap: 12px;
+  gap: 14px;
 }
 
 .skill-card {
@@ -398,20 +512,23 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 6px;
-  padding: 14px 15px;
-  border-radius: calc(var(--radius) * .75);
+  padding: 15px 16px;
+  border-radius: calc(var(--radius) * .8);
   background: var(--surface);
   border: 1px solid var(--border);
-  backdrop-filter: blur(var(--blur)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(160%);
-  box-shadow: 0 16px 34px -26px var(--shadow);
-  transition: transform 420ms var(--ease-out), border-color var(--dur-fast) var(--ease), box-shadow 420ms var(--ease-out);
+  box-shadow: var(--nm-raised-sm);
+  cursor: default;
+  transition:
+    transform 420ms var(--spring),
+    box-shadow 420ms var(--ease),
+    border-color var(--dur-fast) var(--ease);
 }
 /* 上半部分（标题 + 描述）吃掉剩余空间，下半部分（进度条 + 熟练度）固定高度，
    这样描述永远有完整的 2 行，不会被压缩成"半行" */
 .skill-card > div:first-child { flex: 1; min-height: 0; overflow: hidden; }
 .skill-card > div:last-child { flex: none; }
-/* 鼠标跟随光斑：--mx/--my 由 JS 写入 */
+
+/* 鼠标跟随的光斑：新拟态下改为「柔光扫过」，而不是彩色斑点 */
 .skill-card::after,
 .project-card::after,
 .contact-card::after {
@@ -419,12 +536,20 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 0%), var(--accent-soft), transparent 65%);
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 0%), var(--accent-soft), transparent 70%);
   opacity: 0;
   transition: opacity 320ms var(--ease);
   pointer-events: none;
 }
-.skill-card:hover { transform: translateY(-4px); border-color: var(--accent-line); box-shadow: 0 26px 46px -28px var(--shadow); }
+
+/* 悬停：卡片「抬起来」—— 阴影拉远变柔，同时轻微上浮 */
+.skill-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent-line);
+  box-shadow:
+    -9px -9px 22px var(--sh-light),
+    9px 9px 22px var(--sh-dark);
+}
 .skill-card:hover::after,
 .project-card:hover::after,
 .contact-card:hover::after { opacity: 1; }
@@ -434,7 +559,7 @@
 .skill-card[data-size="tall"] { grid-row: span 2; }                 /* ③ 纵向合并两行 */
 .skill-card[data-size="big"]  { grid-column: span 2; grid-row: span 2; } /* ④ 2×2 = 四格合并 */
 
-.skill-card__title { font-size: 14px; font-weight: 650; letter-spacing: .2px; line-height: 1.45; }
+.skill-card__title { font-size: 14.5px; font-weight: 650; letter-spacing: -.015em; line-height: 1.45; }
 /* 描述最多两行，超出用省略号收尾；合并成大卡片的可以多显示几行 */
 .skill-card__desc {
   display: -webkit-box;
@@ -448,7 +573,15 @@
 }
 .skill-card[data-size="tall"] .skill-card__desc,
 .skill-card[data-size="big"] .skill-card__desc { -webkit-line-clamp: 7; }
-.skill-card__bar { height: 4px; border-radius: 999px; background: var(--track); overflow: hidden; }
+
+/* 熟练度进度条：轨道凹陷，填充条是凸起的强调色胶囊 */
+.skill-card__bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  box-shadow: var(--nm-inset);
+  overflow: hidden;
+}
 .skill-card__bar i {
   display: block; height: 100%;
   width: var(--lv, 0%);
@@ -456,8 +589,9 @@
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
   transition: width 800ms var(--ease-out);
 }
-.skill-card__level { margin-top: 2px; font-size: 10.5px; line-height: 1.5; color: var(--muted); font-variant-numeric: tabular-nums; }
+.skill-card__level { margin-top: 5px; font-size: 10.5px; line-height: 1.5; color: var(--muted); font-variant-numeric: tabular-nums; }
 
+/* 空状态：一块凹陷的占位区域 */
 .skills-empty, .projects-empty {
   grid-column: 1 / -1;           /* ⑤ 整行合并：空状态横跨整行 */
   display: grid; place-items: center;
@@ -466,8 +600,9 @@
   text-align: center;
   color: var(--muted);
   font-size: 13px;
-  border: 1px dashed var(--border);
-  border-radius: calc(var(--radius) * .75);
+  background: var(--surface-2);
+  border-radius: calc(var(--radius) * .8);
+  box-shadow: var(--nm-inset);
 }
 
 /* ---------------------------------------------------------------------------
@@ -478,7 +613,7 @@
   grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
   grid-auto-rows: minmax(132px, auto);
   grid-auto-flow: dense;
-  gap: 12px;
+  gap: 14px;
 }
 /* 第二个项目之后的卡片保持普通尺寸；列表首项可高亮 —— 这里用 :nth-child 做一次跨列合并示例 */
 .projects-grid .project-card:nth-child(4n + 1) { grid-column: span 2; }   /* ② 每 4 张里有 1 张横向合并 */
@@ -492,44 +627,58 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 18px;
-  border-radius: calc(var(--radius) * .78);
+  padding: 19px;
+  border-radius: calc(var(--radius) * .82);
   background: var(--surface);
   border: 1px solid var(--border);
-  backdrop-filter: blur(var(--blur)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(160%);
-  box-shadow: 0 16px 34px -26px var(--shadow);
+  box-shadow: var(--nm-raised-sm);
   cursor: pointer;
-  transition: transform 420ms var(--ease-out), border-color var(--dur-fast) var(--ease), box-shadow 420ms var(--ease-out);
+  transition:
+    transform 420ms var(--spring),
+    box-shadow 420ms var(--ease),
+    border-color var(--dur-fast) var(--ease);
 }
-.project-card:hover { transform: translateY(-5px); border-color: var(--accent-line); box-shadow: 0 28px 50px -30px var(--shadow); }
-.project-card:active { transform: translateY(-1px) scale(.995); }
+.project-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent-line);
+  box-shadow:
+    -10px -10px 24px var(--sh-light),
+    10px 10px 24px var(--sh-dark);
+}
+/* 点击：整卡被「按下去」，阴影翻转成内凹 —— 新拟态最直观的反馈 */
+.project-card:active {
+  transform: translateY(0) scale(.995);
+  box-shadow: var(--nm-inset);
+}
 
 .project-card__top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.project-card__name { font-size: 15px; font-weight: 650; }
+.project-card__name { font-size: 15.5px; font-weight: 650; letter-spacing: -.02em; }
 .project-card__arrow {
   display: grid; place-items: center;
-  width: 28px; height: 28px; flex: none;
+  width: 30px; height: 30px; flex: none;
   border-radius: 50%;
   color: var(--accent);
-  background: var(--accent-soft);
-  transition: transform 420ms var(--ease-out), background var(--dur-fast) var(--ease);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--nm-raised-sm);
+  transition: transform 420ms var(--spring), box-shadow var(--dur-fast) var(--ease);
 }
 .project-card:hover .project-card__arrow { transform: translate(3px, -3px) rotate(45deg); }
+.project-card:active .project-card__arrow { box-shadow: var(--nm-inset); }
 .project-card__arrow svg { width: 15px; height: 15px; }
 .project-card__desc { font-size: 12.5px; color: var(--muted); line-height: 1.75; flex: 1; }
 .project-card__tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag {
-  padding: 3px 9px;
+  padding: 4px 10px;
   font-size: 11px;
-  color: var(--accent);
+  font-weight: 500;
+  color: var(--accent-ink);            /* 低饱和预设下也要读得清（见 theme.css 的 --accent-ink） */
   border-radius: 999px;
   background: var(--accent-soft);
-  border: 1px solid color-mix(in oklab, var(--accent) 24%, transparent);
 }
 .project-card__gh {
   position: absolute;
-  right: 14px; bottom: 12px;
+  right: 16px; bottom: 14px;
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 10.5px;
   color: var(--muted);
@@ -544,53 +693,74 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   grid-auto-rows: minmax(92px, auto);
-  gap: 12px;
+  gap: 14px;
 }
 .contact-card {
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);   /* ② 图标列 + 文本列 */
+  grid-template-columns: 44px minmax(0, 1fr);   /* ② 图标列 + 文本列 */
   grid-template-areas: "icon text";             /* ① 两个命名区域并排 */
-  gap: 12px;
+  gap: 13px;
   align-items: center;
-  padding: 15px 16px;
-  border-radius: calc(var(--radius) * .72);
+  padding: 16px;
+  border-radius: calc(var(--radius) * .78);
   background: var(--surface);
   border: 1px solid var(--border);
-  backdrop-filter: blur(var(--blur)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(160%);
-  box-shadow: 0 16px 34px -26px var(--shadow);
+  box-shadow: var(--nm-raised-sm);
   cursor: pointer;
-  transition: transform 380ms var(--ease-out), border-color var(--dur-fast) var(--ease);
+  transition:
+    transform 380ms var(--spring),
+    box-shadow 380ms var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    opacity var(--dur-fast) var(--ease);
 }
-.contact-card:hover { transform: translateY(-4px); border-color: var(--accent-line); }
-.contact-card.is-empty { cursor: default; opacity: .72; }
+.contact-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent-line);
+  box-shadow:
+    -9px -9px 22px var(--sh-light),
+    9px 9px 22px var(--sh-dark);
+}
+.contact-card:active { transform: translateY(0) scale(.99); box-shadow: var(--nm-inset); }
+.contact-card.is-empty { cursor: default; opacity: .66; }
+.contact-card.is-empty:hover { transform: none; border-color: var(--border); box-shadow: var(--nm-raised-sm); }
+
+/* 图标底座：凸起的小方块，与卡片的凸起形成「母子层级」 */
 .contact-card__icon {
   grid-area: icon;
   display: grid; place-items: center;
-  width: 42px; height: 42px;
-  border-radius: 13px;
+  width: 44px; height: 44px;
+  border-radius: 15px;
   color: var(--accent);
-  background: var(--accent-soft);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--nm-raised-sm);
+  transition: box-shadow var(--dur-fast) var(--ease);
 }
+.contact-card:active .contact-card__icon { box-shadow: var(--nm-inset); }
 .contact-card__icon svg { width: 20px; height: 20px; }
 .contact-card__body { grid-area: text; min-width: 0; }
 .contact-card__label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
 .contact-card__value {
   font-size: 13.5px;
   font-weight: 600;
+  letter-spacing: -.01em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .contact-card__value.is-empty { color: var(--muted); font-weight: 400; }
 .contact-card__copy {
   position: absolute;
-  right: 10px; top: 10px;
+  right: 12px; top: 12px;
+  padding: 2px 9px;
   font-size: 10.5px;
-  color: var(--accent);
+  font-weight: 500;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  border-radius: 999px;
   opacity: 0;
   transform: translateY(-4px);
-  transition: opacity 260ms var(--ease), transform 260ms var(--ease);
+  transition: opacity 260ms var(--ease), transform 260ms var(--spring);
 }
 .contact-card:hover .contact-card__copy { opacity: 1; transform: none; }
 
@@ -598,18 +768,20 @@
  * 10. 页脚
  * ------------------------------------------------------------------------- */
 .foot {
-  margin-top: 26px;
+  margin-top: 28px;
   text-align: center;
   font-size: 12px;
   color: var(--muted);
 }
+.foot a { color: var(--accent-ink); }
 .foot kbd {
-  padding: 2px 7px;
+  padding: 3px 8px;
   font-size: 11px;
   font-family: inherit;
-  border-radius: 6px;
+  border-radius: 7px;
+  background: var(--surface);
   border: 1px solid var(--border);
-  background: var(--surface-2);
+  box-shadow: var(--nm-raised-sm);
 }
 
 /* ---------------------------------------------------------------------------
@@ -627,9 +799,9 @@
 }
 
 @media (max-width: 560px) {
-  .page { padding: 14px 0 40px; }
-  .shell { width: calc(100% - 24px); gap: 14px; }
-  .section { padding: 18px 16px; }
+  .page { padding: 16px 0 44px; }
+  .shell { width: calc(100% - 24px); gap: 16px; }
+  .section { padding: 20px 18px; }
   .skills-grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); grid-auto-rows: 116px; }
   /* 单列时取消合并，防止隐式列把卡片挤出屏幕 */
   .skill-card[data-size] { grid-column: span 1; grid-row: span 1; }

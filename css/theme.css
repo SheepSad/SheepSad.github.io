@@ -1,6 +1,24 @@
 /* ============================================================================
  * theme.css —— 设计令牌 / 白日·黑夜双主题 / 全局动效 / 通用组件
  * ----------------------------------------------------------------------------
+ * ★ 视觉语言：Neumorphism（新拟态）× Apple Design（苹果设计语言）
+ *
+ *   【新拟态：光从左上角来】
+ *     核心规则只有一条：控件表面与页面背景「同色」，立体感完全由一对
+ *     互补的阴影制造 —— 左上角是亮面，右下角是暗面。
+ *         box-shadow:  -6px -6px 14px var(--sh-light),    ← 受光边
+ *                       6px  6px 14px var(--sh-dark);     ← 背光边
+ *     按下/凹槽状态把这对阴影「翻到内侧」（inset），配合 inset 高光，
+ *     就能得到被按下去的真实触感。
+ *     因为明暗面都是由背景色推导出来的，两套主题（白日/黑夜）各自成立。
+ *
+ *   【苹果设计语言的落点】
+ *     · 字体：SF Pro → 苹方 → HarmonyOS，字重分层，字距收紧（-0.01em）
+ *     · 色调：Apple 系统蓝（#0071e3 / 黑夜 #0a84ff），克制而精准
+ *     · 圆角：连续曲率的大圆角（卡片 22px 起），按钮用胶囊形
+ *     · 动效：cubic-bezier(.34,1.56,.64,1) 弹性回弹 + 极短时长
+ *     · 层次：抬升幅度极小（1~4px），靠阴影而非边框分离层级
+ *
  * 【主题切换动效的实现原理】
  *   1. 用 @property 把「颜色令牌」注册成真正的 CSS 自定义属性（语法 <color>）。
  *      未注册的自定义属性只是一段字符串，浏览器无法对它做插值；
@@ -14,45 +32,63 @@
 /* ---------------------------------------------------------------------------
  * 1. 注册可插值的令牌（颜色 + 长度）
  * ------------------------------------------------------------------------- */
-@property --bg          { syntax: "<color>";  inherits: true; initial-value: #eef1f8; }
+@property --bg          { syntax: "<color>";  inherits: true; initial-value: #e8edf5; }
 @property --bg-2        { syntax: "<color>";  inherits: true; initial-value: #ffffff; }
-@property --text        { syntax: "<color>";  inherits: true; initial-value: #12141a; }
-@property --muted       { syntax: "<color>";  inherits: true; initial-value: #5c6376; }
-@property --surface     { syntax: "<color>";  inherits: true; initial-value: rgba(255,255,255,.72); }
-@property --surface-2   { syntax: "<color>";  inherits: true; initial-value: rgba(255,255,255,.48); }
-@property --border      { syntax: "<color>";  inherits: true; initial-value: rgba(18,20,26,.10); }
-@property --accent      { syntax: "<color>";  inherits: true; initial-value: #5b7cfa; }
-@property --accent-2    { syntax: "<color>";  inherits: true; initial-value: #8a6bff; }
-@property --shadow      { syntax: "<color>";  inherits: true; initial-value: rgba(23,29,48,.14); }
+@property --text        { syntax: "<color>";  inherits: true; initial-value: #0b0d12; }
+@property --muted       { syntax: "<color>";  inherits: true; initial-value: #5a6272; }
+@property --surface     { syntax: "<color>";  inherits: true; initial-value: #e8edf5; }
+@property --surface-2   { syntax: "<color>";  inherits: true; initial-value: #e4eaf3; }
+@property --border      { syntax: "<color>";  inherits: true; initial-value: rgba(11,13,18,.05); }
+@property --accent      { syntax: "<color>";  inherits: true; initial-value: #0071e3; }
+@property --accent-2    { syntax: "<color>";  inherits: true; initial-value: #4aa3ff; }
+@property --shadow      { syntax: "<color>";  inherits: true; initial-value: rgba(29,42,74,.20); }
+@property --sh-light    { syntax: "<color>";  inherits: true; initial-value: rgba(255,255,255,.96); }
+@property --sh-dark     { syntax: "<color>";  inherits: true; initial-value: rgba(29,42,74,.20); }
+/* 毛玻璃强度已下线（新拟态皮肤不需要），改为固定值，只留给 toast 之类的浮层使用 */
 @property --blur        { syntax: "<length>"; inherits: true; initial-value: 18px; }
-@property --radius      { syntax: "<length>"; inherits: true; initial-value: 20px; }
+@property --radius      { syntax: "<length>"; inherits: true; initial-value: 22px; }
 
 /* ---------------------------------------------------------------------------
  * 2. 令牌定义：:root = 白日主题（浅色）；[data-theme="dark"] = 黑夜主题
  * ------------------------------------------------------------------------- */
 :root {
-  /* 时间/缓动 */
+  /* 时间/缓动 —— 苹果式：短、快、带一点点回弹 */
   --dur: 620ms;
   --dur-fast: 220ms;
   --ease: cubic-bezier(.22, .68, .28, 1);
   --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --spring: cubic-bezier(.34, 1.56, .64, 1);       /* 弹性回弹：按下去会「弹」回来 */
 
-  /* 白日主题配色 */
-  --bg: #eef1f8;
+  /* ---- 新拟态几何：明暗面偏移量与模糊半径 ---- */
+  --sh-x: 6px;      /* 投影向右偏移 */
+  --sh-y: 6px;      /* 投影向下偏移 */
+  --sh-blur: 14px;  /* 投影模糊半径 */
+  --sh-x-sm: 3px;   /* 小控件的偏移 */
+  --sh-y-sm: 3px;
+  --sh-blur-sm: 7px;
+
+  /* ---- 白日主题：极淡的冷灰蓝底，新拟态的经典底色 ---- */
+  --bg: #e8edf5;
   --bg-2: #ffffff;
-  --text: #12141a;
-  --muted: #5c6376;
-  --surface: rgba(255, 255, 255, .72);
-  --surface-2: rgba(255, 255, 255, .48);
-  --border: rgba(18, 20, 26, .10);
-  --shadow: rgba(23, 29, 48, .14);
-  --accent: #5b7cfa;
-  --accent-2: #8a6bff;
+  --text: #0b0d12;
+  --muted: #5a6272;
 
-  --blob-1: rgba(91, 124, 250, .28);
-  --blob-2: rgba(138, 107, 255, .22);
-  --blob-3: rgba(64, 200, 190, .18);
-  --ink-line: rgba(18, 20, 26, .045);
+  /* 新拟态要求「表面 = 背景」，所以 surface 不使用半透明白 */
+  --surface: #e8edf5;
+  --surface-2: #e4eaf3;
+  --border: rgba(11, 13, 18, .05);
+  --shadow: rgba(29, 42, 74, .20);
+  --sh-light: rgba(255, 255, 255, .96);   /* 左上受光面：接近纯白 */
+  --sh-dark: rgba(29, 42, 74, .20);       /* 右下背光面：冷灰蓝 */
+
+  --accent: #0071e3;                       /* Apple 系统蓝 */
+  --accent-2: #4aa3ff;
+
+  /* 光斑兜底色（不支持 color-mix 的浏览器用它们；支持时改为跟随强调色，见 2.1） */
+  --blob-1: rgba(0, 113, 227, .16);
+  --blob-2: rgba(90, 200, 250, .14);
+  --blob-3: rgba(120, 150, 200, .12);
+  --ink-line: rgba(11, 13, 18, .035);
 
   color-scheme: light;
 
@@ -67,58 +103,97 @@
     --border var(--dur) var(--ease),
     --accent var(--dur) var(--ease),
     --accent-2 var(--dur) var(--ease),
-    --shadow var(--dur) var(--ease);
+    --shadow var(--dur) var(--ease),
+    --sh-light var(--dur) var(--ease),
+    --sh-dark var(--dur) var(--ease);
 }
 
 [data-theme="dark"] {
-  /* 黑夜主题配色 */
-  --bg: #0a0c12;
-  --bg-2: #12151d;
-  --text: #eef1f8;
-  --muted: #98a1b4;
-  --surface: rgba(24, 28, 38, .66);
-  --surface-2: rgba(30, 35, 47, .5);
-  --border: rgba(255, 255, 255, .10);
-  --shadow: rgba(0, 0, 0, .55);
-  --accent: #6d8bff;
-  --accent-2: #a98cff;
+  /* ---- 黑夜主题：深蓝黑底。新拟态在暗色下反差不靠纯黑，而靠「抬灰」 ---- */
+  --bg: #14161c;
+  --bg-2: #1c1f27;
+  --text: #f2f4f8;
+  --muted: #98a1b2;
 
-  --blob-1: rgba(80, 110, 240, .30);
-  --blob-2: rgba(150, 100, 255, .24);
-  --blob-3: rgba(40, 180, 200, .18);
-  --ink-line: rgba(255, 255, 255, .05);
+  --surface: #14161c;
+  --surface-2: #181b22;
+  --border: rgba(255, 255, 255, .05);
+  --shadow: rgba(0, 0, 0, .62);
+  --sh-light: rgba(255, 255, 255, .055);  /* 暗色下亮面必须极弱，否则会「发灰」 */
+  --sh-dark: rgba(0, 0, 0, .62);
+
+  --accent: #0a84ff;                       /* Apple 系统蓝（黑夜版） */
+  --accent-2: #64b5ff;
+
+  --blob-1: rgba(10, 132, 255, .20);
+  --blob-2: rgba(100, 181, 255, .14);
+  --blob-3: rgba(140, 120, 255, .12);
+  --ink-line: rgba(255, 255, 255, .035);
 
   color-scheme: dark;
 }
 
 /* ---------------------------------------------------------------------------
- * 2.1 由强调色派生出来的半透明色
+ * 2.1 由强调色 / 文字色派生出来的半透明色
  * ---------------------------------------------------------------------------
- * ⚠️ 线上兼容性：这些值用 color-mix() 从 --accent 实时推导。
+ * ⚠️ 线上兼容性：这些值用 color-mix() 实时推导。
  *    旧版 Safari(<16.2) / Firefox(<113) 不认识 color-mix，
  *    而「未注册的自定义属性里写了不支持的函数」不会退回上一行声明，
  *    只会让最终 background/border 变成无效值（界面掉色）。
- *    所以这里先给一套固定兜底值，再用 @supports 覆盖成动态推导 —— 
- *    这样任何浏览器打开线上站点都能看到完整的毛玻璃与强调色。
+ *    所以这里先给一套固定兜底值，再用 @supports 覆盖成动态推导 ——
+ *    这样任何浏览器打开线上站点都能看到完整的新拟态与强调色。
  * ------------------------------------------------------------------------- */
 :root {
-  --accent-soft: rgba(91, 124, 250, .16);
-  --accent-line: rgba(91, 124, 250, .45);
-  --ring: rgba(91, 124, 250, .55);
-  --track: rgba(18, 20, 26, .14);
+  --accent-soft: rgba(0, 113, 227, .12);
+  --accent-line: rgba(0, 113, 227, .38);
+  --ring: rgba(0, 113, 227, .55);
+  --track: rgba(11, 13, 18, .10);
+  --tint: rgba(255, 255, 255, .72);        /* 悬浮在强调色上的白色蒙版 */
+  --accent-ink: var(--accent);             /* 兜底：不支持 color-mix 时就用纯强调色，见下方覆盖 */
+
+  /* 新拟态的三套常用阴影，直接以令牌形式复用 */
+  --nm-raised:
+    calc(var(--sh-x) * -1) calc(var(--sh-y) * -1) var(--sh-blur) var(--sh-light),
+    var(--sh-x) var(--sh-y) var(--sh-blur) var(--sh-dark);
+  --nm-raised-sm:
+    calc(var(--sh-x-sm) * -1) calc(var(--sh-y-sm) * -1) var(--sh-blur-sm) var(--sh-light),
+    var(--sh-x-sm) var(--sh-y-sm) var(--sh-blur-sm) var(--sh-dark);
+  --nm-inset:
+    inset calc(var(--sh-x-sm) * -1) calc(var(--sh-y-sm) * -1) var(--sh-blur-sm) var(--sh-light),
+    inset var(--sh-x-sm) var(--sh-y-sm) var(--sh-blur-sm) var(--sh-dark);
 }
 [data-theme="dark"] {
-  --accent-soft: rgba(109, 139, 255, .18);
-  --accent-line: rgba(109, 139, 255, .45);
-  --ring: rgba(109, 139, 255, .55);
-  --track: rgba(255, 255, 255, .14);
+  --accent-soft: rgba(10, 132, 255, .16);
+  --accent-line: rgba(10, 132, 255, .40);
+  --ring: rgba(10, 132, 255, .58);
+  --track: rgba(255, 255, 255, .10);
+  --tint: rgba(255, 255, 255, .16);
 }
 @supports (color: color-mix(in oklab, red, blue)) {
   :root {
-    --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
-    --accent-line: color-mix(in oklab, var(--accent) 45%, transparent);
+    --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+    --accent-line: color-mix(in oklab, var(--accent) 38%, transparent);
     --ring: color-mix(in oklab, var(--accent) 55%, transparent);
-    --track: color-mix(in oklab, var(--text) 14%, transparent);
+    --track: color-mix(in oklab, var(--text) 10%, transparent);
+    --tint: color-mix(in oklab, var(--bg-2) 65%, transparent);
+
+    /* ★「强调色文字」专用色：把强调色往正文色里混 40%。
+       低饱和预设（Apple 灰白 / 暖阳米白 / 深海夜蓝）的强调色直接当正文色用时
+       只有 2.6~3.0:1，13px 的字会发虚；混过之后能到 4.5:1 以上，
+       同时仍然明显是强调色。用于：设置页选中项、分段控件选中项、头像首字母。 */
+    --accent-ink: color-mix(in oklab, var(--accent) 60%, var(--text));
+
+    /* ★ 背景装饰光斑跟随强调色（强调色一变，三团光晕立刻同步）。
+       为了「柔和、不突兀」，先把强调色和背景色混一道降低鲜艳度（85% 强调 + 15% 背景），
+       再叠透明度——这样光斑是一层淡淡的气氛色，而不是一块高饱和色斑。 */
+    --blob-1: color-mix(in oklab, color-mix(in oklab, var(--accent) 85%, var(--bg)) 17%, transparent);
+    --blob-2: color-mix(in oklab, color-mix(in oklab, var(--accent-2) 80%, var(--bg)) 15%, transparent);
+    --blob-3: color-mix(in oklab, color-mix(in oklab, var(--accent) 78%, var(--bg)) 11%, transparent);
+  }
+  [data-theme="dark"] {
+    --blob-1: color-mix(in oklab, color-mix(in oklab, var(--accent) 85%, var(--bg)) 22%, transparent);
+    --blob-2: color-mix(in oklab, color-mix(in oklab, var(--accent-2) 80%, var(--bg)) 15%, transparent);
+    --blob-3: color-mix(in oklab, color-mix(in oklab, var(--accent) 78%, var(--bg)) 13%, transparent);
   }
 }
 
@@ -131,15 +206,19 @@ html, body { min-height: 100%; }
 
 body {
   margin: 0;
-  font-family: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei UI", "Microsoft YaHei",
-               -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-family: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont,
+               "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei UI", "Microsoft YaHei",
+               "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   font-size: 15px;
-  line-height: 1.7;
+  line-height: 1.6;
+  letter-spacing: -.006em;         /* 苹果式：正文轻微收紧字距 */
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 
 h1, h2, h3, h4, p, figure { margin: 0; }
@@ -157,11 +236,11 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 :focus-visible {
   outline: 2px solid var(--ring);
-  outline-offset: 2px;
-  border-radius: 8px;
+  outline-offset: 3px;
+  border-radius: 12px;
 }
 
-/* 滚动条 */
+/* 滚动条 —— 苹果式：极细、无轨道、悬停才显色 */
 * { scrollbar-width: thin; scrollbar-color: var(--track) transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-thumb {
@@ -172,7 +251,9 @@ ul { margin: 0; padding: 0; list-style: none; }
 *::-webkit-scrollbar-track { background: transparent; }
 
 /* ---------------------------------------------------------------------------
- * 4. 背景装饰：双主题各有不同的光斑与网格线
+ * 4. 背景装饰
+ *   新拟态最忌讳背景太花，否则阴影的明暗关系会被冲散。
+ *   所以这里把光斑压到极淡（白日几乎只剩一层空气感），网格线也只做「隐约的纸纹」。
  * ------------------------------------------------------------------------- */
 .bg-decor {
   position: fixed;
@@ -185,13 +266,13 @@ ul { margin: 0; padding: 0; list-style: none; }
   position: absolute;
   display: block;
   border-radius: 50%;
-  filter: blur(70px);
-  opacity: .95;
+  filter: blur(90px);
+  opacity: .85;
   transition: background var(--dur) var(--ease);
 }
-.blob--1 { width: 46vw; height: 46vw; left: -10vw; top: -12vw; background: var(--blob-1); animation: float1 22s var(--ease) infinite alternate; }
-.blob--2 { width: 38vw; height: 38vw; right: -8vw; top: 6vh; background: var(--blob-2); animation: float2 26s var(--ease) infinite alternate; }
-.blob--3 { width: 42vw; height: 42vw; left: 26vw; bottom: -18vw; background: var(--blob-3); animation: float3 30s var(--ease) infinite alternate; }
+.blob--1 { width: 44vw; height: 44vw; left: -12vw; top: -14vw; background: var(--blob-1); animation: float1 26s var(--ease) infinite alternate; }
+.blob--2 { width: 36vw; height: 36vw; right: -10vw; top: 4vh; background: var(--blob-2); animation: float2 30s var(--ease) infinite alternate; }
+.blob--3 { width: 40vw; height: 40vw; left: 28vw; bottom: -20vw; background: var(--blob-3); animation: float3 34s var(--ease) infinite alternate; }
 
 .bg-decor .grid-lines {
   position: absolute;
@@ -213,77 +294,123 @@ ul { margin: 0; padding: 0; list-style: none; }
  * 5. 通用组件
  * ------------------------------------------------------------------------- */
 
-/* 5.1 毛玻璃卡片 —— 技能 / 项目 / 联系方式等板块的视觉基础 */
+/* 5.1 新拟态基础类
+ *     .nm       —— 凸起（从背景里「长」出来）
+ *     .nm-in    —— 凹陷（被按进背景里）
+ *     .glass    —— 沿用旧类名，语义改为「新拟态面板」
+ *                   跳转设置页与主页共用，避免改动 HTML 结构
+ * ------------------------------------------------------------------------- */
+.nm {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--nm-raised);
+}
+.nm-in {
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  box-shadow: var(--nm-inset);
+}
 .glass {
   position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  backdrop-filter: blur(var(--blur)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(160%);
+  /* 顶部 1px 高光：让面板边缘像被光扫过，是苹果卡片的关键细节 */
   box-shadow:
-    0 18px 40px -24px var(--shadow),
-    inset 0 1px 0 color-mix(in oklab, var(--bg-2) 55%, transparent);
+    var(--nm-raised),
+    inset 0 1px 0 var(--sh-light);
 }
-
+/* 旧类名 .card 仍然可用 */
 .card { padding: 22px; }
 
-/* 5.2 按钮 */
+/* 5.2 按钮 —— 苹果式胶囊 + 新拟态凸起；按下时变凹陷 */
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
-  border-radius: calc(var(--radius) * .6);
-  background: var(--surface-2);
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
   font-size: 14px;
   font-weight: 500;
+  letter-spacing: -.01em;
   cursor: pointer;
-  transition: transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease),
-              border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+  box-shadow: var(--nm-raised-sm);
+  transition:
+    transform var(--dur-fast) var(--spring),
+    box-shadow var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
 }
-.btn:hover { transform: translateY(-2px); border-color: var(--accent-line); box-shadow: 0 12px 24px -16px var(--shadow); }
-.btn:active { transform: translateY(0) scale(.98); }
+.btn:hover { color: var(--accent); border-color: var(--accent-line); transform: translateY(-1px); }
+.btn:active {
+  transform: translateY(0) scale(.98);
+  /* ★ 新拟态精髓：按下时阴影翻到内侧，控件「陷进」背景 */
+  box-shadow: var(--nm-inset);
+}
 .btn svg { width: 16px; height: 16px; }
 
+/* 主按钮：苹果的实心强调色胶囊（唯一「跳出来」的元素） */
 .btn--primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  background: var(--accent);
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 14px 28px -16px var(--accent);
+  box-shadow: 0 6px 16px -6px color-mix(in oklab, var(--accent) 60%, transparent);
 }
-.btn--primary:hover { box-shadow: 0 18px 34px -14px var(--accent); }
+.btn--primary:hover {
+  color: #fff;
+  background: color-mix(in oklab, var(--accent) 88%, #000);
+  box-shadow: 0 10px 22px -8px color-mix(in oklab, var(--accent) 70%, transparent);
+}
+.btn--primary:active { box-shadow: var(--nm-inset); }
 
-.btn--ghost { background: transparent; }
-.btn--danger { color: #ff6b6b; border-color: color-mix(in oklab, #ff6b6b 35%, transparent); }
-.btn--danger:hover { background: color-mix(in oklab, #ff6b6b 12%, transparent); border-color: #ff6b6b; }
-.btn--sm { padding: 7px 12px; font-size: 13px; }
+.btn--ghost { background: transparent; box-shadow: none; border-color: transparent; }
+.btn--ghost:hover { background: var(--surface-2); box-shadow: var(--nm-inset); }
+.btn--danger { color: #ff453a; }
+.btn--danger:hover {
+  color: #ff453a;
+  border-color: color-mix(in oklab, #ff453a 40%, transparent);
+  background: color-mix(in oklab, #ff453a 8%, var(--surface));
+  box-shadow: var(--nm-raised-sm);
+}
+.btn--sm { padding: 7px 13px; font-size: 13px; }
 
-/* 5.3 图标按钮（设置入口 / 主题切换） */
+/* 5.3 图标按钮 —— 圆形新拟态「旋钮」，苹果式的大圆角方形 */
 .icon-btn {
   display: inline-grid;
   place-items: center;
   width: 42px;
   height: 42px;
   border-radius: 14px;
-  background: var(--surface-2);
+  background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
   cursor: pointer;
-  backdrop-filter: blur(calc(var(--blur) * .6));
-  -webkit-backdrop-filter: blur(calc(var(--blur) * .6));
-  transition: transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease),
-              border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  box-shadow: var(--nm-raised-sm);
+  transition:
+    transform var(--dur-fast) var(--spring),
+    box-shadow var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
 }
-.icon-btn:hover { transform: translateY(-2px); border-color: var(--accent-line); color: var(--accent); }
-.icon-btn:active { transform: scale(.94); }
+.icon-btn:hover { color: var(--accent); border-color: var(--accent-line); transform: translateY(-1px); }
+.icon-btn:active { transform: scale(.97); box-shadow: var(--nm-inset); }
 .icon-btn svg { width: 19px; height: 19px; }
 .icon-btn--sm { width: 34px; height: 34px; border-radius: 11px; }
 .icon-btn--sm svg { width: 16px; height: 16px; }
 
-/* 设置齿轮：悬停缓慢旋转 */
+/* 处于「非默认状态」的小按钮（例如循环模式选了单曲/随机）点亮成强调色 */
+.icon-btn.is-on {
+  color: var(--accent-ink);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+/* 设置齿轮：悬停缓慢旋转（苹果式克制的 60°，不是转圈） */
 .icon-btn--gear:hover svg { transform: rotate(60deg); }
 .icon-btn--gear svg { transition: transform 520ms var(--ease-out); }
 
@@ -306,33 +433,40 @@ ul { margin: 0; padding: 0; list-style: none; }
   bottom: 3px;
   font-size: 9px;
   letter-spacing: .5px;
-  color: var(--accent);
+  /* 这枚 AUTO 小标只有 9px，如果直接用 var(--accent)，
+     碰上低饱和预设（Apple 灰白 / 暖阳米白）就只有 2.7:1，基本看不清。
+     改用次级文字色，任何强调色下都稳稳可读。 */
+  color: var(--muted);
   opacity: 0;
   transform: translateY(4px);
   transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 body[data-theme-mode="auto"] .theme-toggle .auto-badge { opacity: 1; transform: translateY(0); }
 
-/* 5.5 表单控件 */
+/* 5.5 表单控件 —— 输入框一律「凹陷」，这是新拟态表单的标准做法 */
 .field { display: grid; gap: 8px; margin-bottom: 18px; }
-.field__label { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.field__label { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; letter-spacing: -.01em; }
 .field__hint { font-size: 12px; color: var(--muted); line-height: 1.6; }
 
 .input, .textarea, .select {
   width: 100%;
-  padding: 11px 14px;
-  border-radius: calc(var(--radius) * .55);
+  padding: 11px 15px;
+  border-radius: calc(var(--radius) * .6);
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   color: var(--text);
   font-size: 14px;
-  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+  box-shadow: var(--nm-inset);
+  transition: box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
 .input::placeholder, .textarea::placeholder { color: var(--muted); opacity: .75; }
+/* 聚焦：凹陷里亮起一圈强调色光环 */
 .input:focus, .textarea:focus, .select:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
+  background: var(--surface-2);
+  box-shadow:
+    var(--nm-inset),
+    0 0 0 4px var(--accent-soft);
 }
 .textarea { min-height: 110px; resize: vertical; line-height: 1.75; }
 .select { appearance: none; cursor: pointer;
@@ -344,115 +478,231 @@ body[data-theme-mode="auto"] .theme-toggle .auto-badge { opacity: 1; transform: 
 }
 .select option { background: var(--bg-2); color: var(--text); }
 
-/* 自定义滑杆：用 --p 控制已填充比例 */
+/* 自定义滑杆：凹陷轨道 + 凸起旋钮，用 --p 控制已填充比例 */
 .range {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 6px;
+  height: 8px;
   border-radius: 999px;
   background: linear-gradient(90deg, var(--accent) 0 var(--p, 0%), var(--track) var(--p, 0%) 100%);
+  box-shadow: var(--nm-inset);
   cursor: pointer;
   transition: background var(--dur-fast) linear;
 }
 .range::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 15px; height: 15px;
+  width: 18px; height: 18px;
   border-radius: 50%;
   background: var(--bg-2);
-  border: 3px solid var(--accent);
-  box-shadow: 0 2px 10px -2px var(--accent);
-  transition: transform var(--dur-fast) var(--ease);
+  border: 1px solid var(--border);
+  /* 旋钮是凸起的：右下投影 + 左上高光 */
+  box-shadow: var(--nm-raised-sm);
+  transition: transform var(--dur-fast) var(--spring), box-shadow var(--dur-fast) var(--ease);
 }
-.range::-webkit-slider-thumb:hover { transform: scale(1.18); }
+.range::-webkit-slider-thumb:hover { transform: scale(1.14); }
+.range::-webkit-slider-thumb:active { transform: scale(.96); box-shadow: var(--nm-inset); }
 .range::-moz-range-thumb {
-  width: 13px; height: 13px; border-radius: 50%;
-  background: var(--bg-2); border: 3px solid var(--accent); cursor: pointer;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  box-shadow: var(--nm-raised-sm);
+  cursor: pointer;
 }
 
-/* 开关 */
+/* 开关 —— 苹果 iOS 风格：凹陷轨道 + 凸起圆钮 */
 .switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
 .switch input { position: absolute; opacity: 0; pointer-events: none; }
 .switch__track {
-  width: 44px; height: 26px; border-radius: 999px;
-  background: var(--track);
-  border: 1px solid var(--border);
+  width: 46px; height: 27px; border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  box-shadow: var(--nm-inset);
   position: relative;
-  transition: background var(--dur-fast) var(--ease);
+  transition: background var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
 .switch__track::after {
   content: "";
-  position: absolute; top: 2px; left: 2px;
-  width: 20px; height: 20px; border-radius: 50%;
+  position: absolute; top: 3px; left: 3px;
+  width: 21px; height: 21px; border-radius: 50%;
   background: var(--bg-2);
-  box-shadow: 0 2px 8px -2px var(--shadow);
-  transition: transform 320ms var(--ease-out), background var(--dur-fast) var(--ease);
+  box-shadow: 0 2px 6px -1px var(--sh-dark);
+  transition: transform 320ms var(--spring), background var(--dur-fast) var(--ease);
 }
-.switch input:checked + .switch__track { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
-.switch input:checked + .switch__track::after { transform: translateX(18px); }
+.switch input:checked + .switch__track {
+  background: var(--accent);
+  box-shadow:
+    var(--nm-inset),
+    0 0 0 1px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+.switch input:checked + .switch__track::after { transform: translateX(19px); }
+.switch input:focus-visible + .switch__track { outline: 2px solid var(--ring); outline-offset: 3px; }
 .switch__text { font-size: 13px; }
 
-/* 分段控件 */
+/* 分段控件 —— 苹果 UISegmentedControl：整体凹陷，选中项凸起 */
 .seg {
   display: inline-flex;
   gap: 4px;
   padding: 4px;
-  border-radius: calc(var(--radius) * .6);
+  border-radius: 999px;
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
+  box-shadow: var(--nm-inset);
 }
 .seg__item {
-  padding: 8px 16px;
-  border-radius: calc(var(--radius) * .45);
+  padding: 8px 17px;
+  border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
+  letter-spacing: -.01em;
   color: var(--muted);
-  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease),
+              box-shadow var(--dur-fast) var(--ease), transform var(--dur-fast) var(--spring);
 }
 .seg__item:hover { color: var(--text); }
 .seg__item.is-active {
-  color: #fff;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  box-shadow: 0 8px 18px -12px var(--accent);
+  color: var(--accent-ink);            /* 用「读得清的强调色」，低饱和预设下也不会发虚 */
+  background: var(--surface);
+  box-shadow: var(--nm-raised-sm);
+  font-weight: 600;
 }
 
-/* 色点 */
-.color-dots { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+/* 色点 —— 凸起的小圆片；选中时套一圈强调色光环 + 打勾，
+   即使是银白/石墨这类很浅的强调色也能一眼看出选的是哪一个 */
+.color-dots { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
 .color-dot {
-  width: 28px; height: 28px; border-radius: 50%;
+  position: relative;
+  display: grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 50%;
   border: 2px solid transparent;
-  box-shadow: 0 4px 12px -6px var(--shadow);
+  box-shadow: var(--nm-raised-sm);
   cursor: pointer;
-  transition: transform var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+  transition: transform var(--dur-fast) var(--spring), box-shadow var(--dur-fast) var(--ease);
 }
 .color-dot:hover { transform: scale(1.12); }
-.color-dot.is-active { border-color: var(--text); transform: scale(1.06); }
-input[type="color"].color-input {
-  width: 44px; height: 30px; padding: 0; border: 1px solid var(--border);
-  border-radius: 9px; background: none; cursor: pointer;
+.color-dot.is-active {
+  transform: scale(1.06);
+  /* 双层光环：先用背景色隔开一圈，再套强调色，任何底色下都清晰 */
+  box-shadow: var(--nm-raised-sm), 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+.color-dot.is-active::after {
+  content: "✓";
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .45);   /* 浅色强调色上打勾也看得见 */
 }
 
-/* 提示条 */
+/* 自定义强调色的取色器：做成和色点同款「圆形实心色片」，
+   不要再出现浏览器默认那种带黑边的矩形色框 */
+input[type="color"].color-input {
+  width: 30px; height: 30px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--nm-raised-sm);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  overflow: hidden;
+  transition: transform var(--dur-fast) var(--spring), box-shadow var(--dur-fast) var(--ease);
+}
+input[type="color"].color-input:hover { transform: scale(1.12); }
+input[type="color"].color-input::-webkit-color-swatch-wrapper { padding: 0; }
+input[type="color"].color-input::-webkit-color-swatch { border: 0; border-radius: 50%; }
+input[type="color"].color-input::-moz-color-swatch { border: 0; border-radius: 50%; }
+
+/* 字体颜色 / 背景颜色 —— 成对的取色芯片（白天 + 黑夜各一枚）
+   整块是一个凹陷的「色槽」，每枚芯片凸起，点一下即可唤起系统取色器 */
+.color-pair {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  border-radius: calc(var(--radius) * .6);
+  background: var(--surface-2);
+  box-shadow: var(--nm-inset);
+}
+.color-pair__label {
+  min-width: 34px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.color-chip {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 6px 14px 6px 8px;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--nm-raised-sm);
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--spring), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.color-chip:hover { transform: translateY(-1px); color: var(--text); }
+.color-chip:active { box-shadow: var(--nm-inset); transform: translateY(0) scale(.98); }
+.color-chip input[type="color"] {
+  width: 26px; height: 26px; padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;                       /* 圆形取色芯片，和色点视觉统一 */
+  background: none;
+  cursor: pointer;
+  overflow: hidden;
+}
+.color-chip input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.color-chip input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 50%; }
+.color-chip input[type="color"]::-moz-color-swatch { border: 0; border-radius: 50%; }
+.color-chip__name { white-space: nowrap; }
+.color-pair__reset { margin-left: auto; }
+
+/* 提示条 —— 苹果式：悬浮胶囊，无边框，阴影明确 */
 .toast {
   position: fixed;
   left: 50%;
   bottom: 28px;
   z-index: 9999;
   transform: translate(-50%, 24px);
-  padding: 11px 20px;
+  padding: 12px 22px;
   font-size: 13.5px;
+  font-weight: 500;
   color: var(--text);
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--bg-2);
   border: 1px solid var(--border);
-  backdrop-filter: blur(calc(var(--blur) * 1.2)) saturate(160%);
-  -webkit-backdrop-filter: blur(calc(var(--blur) * 1.2)) saturate(160%);
-  box-shadow: 0 20px 40px -22px var(--shadow);
+  backdrop-filter: blur(calc(var(--blur) * 1.4)) saturate(180%);
+  -webkit-backdrop-filter: blur(calc(var(--blur) * 1.4)) saturate(180%);
+  box-shadow: 0 18px 40px -12px var(--sh-dark), 0 2px 8px -2px var(--sh-dark);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 300ms var(--ease), transform 380ms var(--ease-out);
+  transition: opacity 300ms var(--ease), transform 380ms var(--spring);
 }
 .toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+
+/* 5.6 按压涟漪（由 js/main.js 的 bindPressRipple 动态创建）
+ *   新拟态的「按下去」只发生在控件边缘（外阴影翻成内阴影），落点本身没有反馈。
+ *   这里从指针位置补一圈水波，把「表面被压下去、受力点向外扩散」的语义补完整。
+ *   --pw-x / --pw-y / --pw-r 由 JS 写入，分别代表落点与扩散半径。
+ */
+.press-wave {
+  position: absolute;
+  left: var(--pw-x, 50%);
+  top: var(--pw-y, 50%);
+  width: 0; height: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, var(--accent-soft) 0%, color-mix(in oklab, var(--accent) 14%, transparent) 55%, transparent 72%);
+  animation: press-out 560ms var(--ease-out) forwards;
+}
+@keyframes press-out {
+  0%   { width: 0; height: 0; margin: 0; opacity: .9; }
+  100% { width: calc(var(--pw-r, 40px) * 2); height: calc(var(--pw-r, 40px) * 2);
+         margin: calc(var(--pw-r, 40px) * -1) 0 0 calc(var(--pw-r, 40px) * -1);
+         opacity: 0; }
+}
+
+/* 承载涟漪的控件需要能裁切溢出，否则水波会糊到卡片外面去 */
+.btn, .icon-btn, .ctrl, .seg__item, .s-nav__item, .chip,
+.add-btn, .playlist__item, .theme-mini { position: relative; overflow: hidden; }
 
 /* ---------------------------------------------------------------------------
  * 6. 主题切换特效层（由 js/theme.js 动态创建与驱动）

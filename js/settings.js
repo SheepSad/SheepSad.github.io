@@ -92,6 +92,7 @@
     });
     syncSegments();
     syncAccent();
+    syncPresets();
     syncMiniThemes();
     updateCounters();
     renderAvatar();
@@ -132,13 +133,14 @@
   }
 
   /* --------------------------------------------------------------------------
-   * 4. 强调色
+   * 4. 强调色（Apple 系统色板，含石墨灰 / 银白）
    * ------------------------------------------------------------------------ */
   function initAccent() {
     const box = $('#accentDots');
     if (!box) return;
     box.innerHTML = theme.ACCENTS.map((c) =>
-      '<button class="color-dot" data-color="' + c + '" style="background:' + c + '" title="' + c + '" aria-label="强调色 ' + c + '"></button>'
+      '<button class="color-dot" data-color="' + c.value + '" style="background:' + c.value + '"' +
+      ' title="' + esc(c.name) + '（' + c.value + '）" aria-label="强调色 ' + esc(c.name) + '"></button>'
     ).join('');
     box.addEventListener('click', (e) => {
       const dot = e.target.closest('.color-dot');
@@ -146,7 +148,8 @@
       local(() => store.set('theme.accent', dot.dataset.color));
       theme.applyTokens();
       syncAccent();
-      toast('强调色已更新');
+      const hit = theme.ACCENTS.filter((c) => c.value === dot.dataset.color)[0];
+      toast('强调色：' + (hit ? hit.name : dot.dataset.color));
     });
   }
   function syncAccent() {
@@ -154,6 +157,86 @@
     $$('#accentDots .color-dot').forEach((d) => d.classList.toggle('is-active', d.dataset.color.toLowerCase() === cur));
     const picker = $('#accentPicker');
     if (picker && picker !== document.activeElement) picker.value = cur;
+  }
+
+  /* --------------------------------------------------------------------------
+   * 4.1 配色预设画廊
+   *      每套预设同时定义白天 / 黑夜两套底色，并自带配套强调色；
+   *      「原生新拟物」= 不注入任何覆盖，完全回到 css/theme.css 的原始皮肤。
+   * ------------------------------------------------------------------------ */
+  function renderPresets() {
+    const box = $('#presetGrid');
+    if (!box) return;
+    const cur = String(store.get('theme.preset') || 'native');
+    box.innerHTML = theme.presetList.map((p) => {
+      const l = p.light || (store.get('theme.customColor') || {}).light || {};
+      const d = p.dark || (store.get('theme.customColor') || {}).dark || {};
+      const lbg = p.custom ? (l.bg || '#e8edf5') : (l.bg || '#e8edf5');
+      const dbg = p.custom ? (d.bg || '#14161c') : (d.bg || '#14161c');
+      const ltx = p.custom ? (l.text || '#0b0d12') : (l.text || '#0b0d12');
+      const dtx = p.custom ? (d.text || '#f2f4f8') : (d.text || '#f2f4f8');
+      const dot = p.accent ? '<span class="preset-card__accent" style="background:' + p.accent + '"></span>' : '';
+      return '' +
+        '<button class="preset-card' + (p.id === cur ? ' is-active' : '') + '" type="button" data-preset="' + p.id + '"' +
+          ' aria-pressed="' + (p.id === cur) + '">' +
+          '<span class="preset-card__preview">' +
+            '<span class="preset-card__half" style="background:' + lbg + '">' +
+              '<i style="background:' + ltx + '"></i><i style="background:' + ltx + '"></i>' +
+            '</span>' +
+            '<span class="preset-card__half" style="background:' + dbg + '">' +
+              '<i style="background:' + dtx + '"></i><i style="background:' + dtx + '"></i>' +
+            '</span>' +
+          '</span>' +
+          '<span class="preset-card__meta">' +
+            '<span class="preset-card__name">' + esc(p.name) + '</span>' + dot +
+          '</span>' +
+          '<span class="preset-card__desc">' + esc(p.desc || '') + '</span>' +
+        '</button>';
+    }).join('');
+  }
+
+  function initPresets() {
+    const box = $('#presetGrid');
+    if (!box) return;
+    box.addEventListener('click', (e) => {
+      const card = e.target.closest('.preset-card');
+      if (!card) return;
+      const id = card.dataset.preset;
+      const preset = local(() => theme.applyPreset(id));
+      syncFields();
+      renderPresets();
+      theme.apply(theme.current, { animate: true, origin: { x: window.innerWidth / 2, y: window.innerHeight / 2 } });
+      toast('配色预设：' + preset.name + (preset.custom ? '（可在下方自定义颜色）' : ''));
+    });
+
+    // 自定义取色芯片：动一下就切到「自定义」预设
+    $$('[data-path^="theme.customColor"]').forEach((el) => {
+      el.addEventListener('input', () => {
+        if (store.get('theme.preset') !== 'custom') {
+          local(() => store.set('theme.preset', 'custom'));
+          renderPresets();
+        }
+      });
+    });
+
+    const reset = $('#customColorReset');
+    if (reset) reset.addEventListener('click', () => {
+      local(() => theme.applyPreset('native'));
+      syncFields();
+      renderPresets();
+      toast('已回到原生新拟物配色');
+    });
+  }
+
+  function syncPresets() {
+    const cur = String(store.get('theme.preset') || 'native');
+    $$('#presetGrid .preset-card').forEach((c) => {
+      const on = c.dataset.preset === cur;
+      c.classList.toggle('is-active', on);
+      c.setAttribute('aria-pressed', String(on));
+    });
+    const field = $('#customColorField');
+    if (field) field.classList.toggle('is-dim', cur !== 'custom');
   }
 
   /* --------------------------------------------------------------------------
@@ -482,10 +565,11 @@
     if (!arr.length) return toast('没有识别到音频文件');
     toast('正在导入 ' + arr.length + ' 个文件…');
     let ok = 0;
+    const added = [];
     for (const file of arr) {
       const id = uid('tk');
       const stored = await store.Audio.put(id, file);
-      store.data.music.tracks.push({
+      added.push({
         id: id,
         title: file.name.replace(/\.[^.]+$/, ''),
         artist: '',
@@ -497,7 +581,9 @@
       });
       if (stored) ok++;
     }
-    local(() => store.save());
+    // 用 update()（而不是直接改 data + save）以便标记「本地内容已被编辑」，
+    // 否则作者导入音乐后，线上更新 content.json 时会把他本地的曲库覆盖掉。
+    local(() => store.update((d) => { d.music.tracks.push.apply(d.music.tracks, added); }));
     renderTracks(); updateCounters(); updateStorage();
     toast('已导入 ' + ok + ' 首音乐' + (store.Audio.mode === 'memory' ? '（仅本次会话有效）' : ''));
   }
@@ -660,6 +746,8 @@
     initNav();
     initSegments();
     initAccent();
+    initPresets();
+    renderPresets();
     initMiniThemes();
     initAvatar();
     initMusic();

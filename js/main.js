@@ -68,6 +68,10 @@
     prev: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5.5a1 1 0 0 1 2 0v13a1 1 0 0 1-2 0z"/><path d="M18.4 5.9c.8-.5 1.8.1 1.8 1v10.2c0 .9-1 1.5-1.8 1l-7.2-5.1a1.2 1.2 0 0 1 0-2z"/></svg>',
     next: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 5.5a1 1 0 0 1 2 0v13a1 1 0 0 1-2 0z"/><path d="M5.6 5.9c-.8-.5-1.8.1-1.8 1v10.2c0 .9 1 1.5 1.8 1l7.2-5.1a1.2 1.2 0 0 0 0-2z"/></svg>',
     list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h11M4 12h11M4 17h7"/><path d="M18.5 14.5v6M15.5 17.5h6"/></svg>',
+    /* 循环模式三态图标：列表循环 / 单曲循环（带 1）/ 随机 */
+    repeat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2.6 20.4 6 17 9.4"/><path d="M3.6 12.4V9.6A3.6 3.6 0 0 1 7.2 6h13.2"/><path d="M7 21.4 3.6 18 7 14.6"/><path d="M20.4 11.6v2.8a3.6 3.6 0 0 1-3.6 3.6H3.6"/></svg>',
+    repeatOne: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2.6 20.4 6 17 9.4"/><path d="M3.6 12.4V9.6A3.6 3.6 0 0 1 7.2 6h13.2"/><path d="M7 21.4 3.6 18 7 14.6"/><path d="M20.4 11.6v2.8a3.6 3.6 0 0 1-3.6 3.6H3.6"/><text x="12" y="14.6" text-anchor="middle" font-size="8.4" font-weight="700" fill="currentColor" stroke="none">1</text></svg>',
+    shuffle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2.6 20.4 6 17 9.4"/><path d="M17 14.6 20.4 18 17 21.4"/><path d="M3.6 6h3.1c1.2 0 2.3.6 3 1.6l4.6 6.8c.7 1 1.8 1.6 3 1.6h3.1"/><path d="M3.6 18h3.1c1.2 0 2.3-.6 3-1.6l1-1.5"/><path d="M14.3 9.1l1-1.5c.7-1 1.8-1.6 3-1.6h2.1"/></svg>',
     volume: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 9H3v6h3.5L11 19z"/><path d="M15.5 9.2a4 4 0 0 1 0 5.6"/></svg>',
     arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>',
     github: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg>',
@@ -80,6 +84,13 @@
     spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.8 9l5.7 1.8-5.7 1.8L12 18.2 10.2 12.6 4.5 10.8 10.2 9z"/></svg>'
   };
   const svg = (name) => ICONS[name] || '';
+
+  /* 循环模式：主页按钮与设置页分段控件共用同一份数据（store 的 music.loop） */
+  const LOOP_MODES = [
+    { id: 'list', name: '列表循环', icon: 'repeat' },
+    { id: 'single', name: '单曲循环', icon: 'repeatOne' },
+    { id: 'shuffle', name: '随机播放', icon: 'shuffle' }
+  ];
 
   /* --------------------------------------------------------------------------
    * 1. 个人资料（左侧栏：圆形头像 + 姓名）
@@ -247,6 +258,7 @@
       $('#prevBtn').addEventListener('click', () => this.prev());
       $('#nextBtn').addEventListener('click', () => this.next());
       $('#listBtn').addEventListener('click', () => this.togglePlaylist());
+      $('#loopBtn').addEventListener('click', () => this.cycleLoop());   // 主页直接切循环模式
 
       const seek = $('#seek');
       seek.addEventListener('input', () => {
@@ -387,13 +399,30 @@
       const t = this.currentTrack();
       $('#songTitle').textContent = t ? (t.title || t.fileName || '未命名') : '未加载音乐';
       $('#songArtist').textContent = t ? (t.artist || '未知歌手') : (this.tracks.length ? '选择一首开始播放' : store.get('music.emptyText'));
-      const cover = $('#cover');
-      const avatar = store.get('profile.avatar');
-      if (avatar) { cover.src = avatar; cover.hidden = false; } else { cover.removeAttribute('src'); cover.hidden = true; }
-      const disc = $('#disc');
-      if (!avatar && t) {
-        disc.style.background = 'linear-gradient(135deg, var(--accent), var(--accent-2))';
-      }
+      this.updateLoopUI();
+    },
+
+    /* ---- 循环模式：列表 → 单曲 → 随机，主页按钮与设置页分段控件共用一份数据 ---- */
+    cycleLoop() {
+      const modes = LOOP_MODES.map((m) => m.id);
+      const cur = String(store.get('music.loop') || 'list');
+      const next = modes[(modes.indexOf(cur) + 1) % modes.length];
+      store.set('music.loop', next);
+      this.updateLoopUI();
+      const hit = LOOP_MODES.filter((m) => m.id === next)[0];
+      toast('循环模式：' + hit.name);
+      return next;
+    },
+
+    updateLoopUI() {
+      const btn = $('#loopBtn');
+      if (!btn) return;
+      const cur = String(store.get('music.loop') || 'list');
+      const hit = LOOP_MODES.filter((m) => m.id === cur)[0] || LOOP_MODES[0];
+      btn.innerHTML = svg(hit.icon);
+      btn.title = '循环模式：' + hit.name + '（点击切换）';
+      btn.setAttribute('aria-label', '循环模式：' + hit.name);
+      btn.classList.toggle('is-on', cur !== 'list');   // 非默认模式时点亮，一眼看出状态
     },
 
     renderPlaylist() {
@@ -473,8 +502,8 @@
         wrap.innerHTML = '<div class="lyric-empty">♪ ' + esc(track.title || '纯音乐') + '<br>还没有歌词，可在设置 → 音乐里粘贴</div>';
         return;
       }
-      const viewH = 100;
-      const pad = Math.max(0, (viewH - this.lineH) / 2);
+      // 顶部内边距由 CSS 变量给出（0 = 当前句贴顶，上一句被裁到视口外）
+      const pad = parseFloat(getComputedStyle(wrap).getPropertyValue('--lyric-top-pad')) || 0;
       wrap.innerHTML = '<div class="lyrics__track" id="lyricTrack" style="padding:' + pad + 'px 0">' +
         this.lines.map((l, i) => '<div class="lyric-line" data-i="' + i + '">' + (esc(l.text) || '·') + '</div>').join('') +
         '</div>';
@@ -499,16 +528,20 @@
       }
       $$('#lyricViewport .lyric-line').forEach((el) => {
         const i = Number(el.dataset.i);
-        const dist = Math.abs(i - idx);
+        // 只让「当前句」和「下一句（常见为翻译行）」完整显示；
+        // 上一句直接隐藏，其余（更远的）保持虚化
         el.classList.toggle('is-active', i === idx);
-        el.classList.toggle('is-near', dist === 1);
+        el.classList.toggle('is-next', i === idx + 1);
+        el.classList.toggle('is-prev', i === idx - 1);
       });
     }
   };
 
   /* --------------------------------------------------------------------------
-   * 7. 交互增强：卡片光斑、点击跳转、复制、滚动渐入
+   * 7. 交互增强：卡片光斑、按压涟漪、点击跳转、复制、滚动渐入
    * ------------------------------------------------------------------------ */
+
+  /* 卡片光斑：把指针位置写进 --mx / --my，卡片上的柔光会跟着鼠标走 */
   function bindCardEffects() {
     document.addEventListener('pointermove', (e) => {
       const card = e.target.closest && e.target.closest('.skill-card, .project-card, .contact-card');
@@ -516,6 +549,54 @@
       const r = card.getBoundingClientRect();
       card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
       card.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    }, { passive: true });
+  }
+
+  /**
+   * 新拟态按压涟漪
+   * ---------------------------------------------------------------------------
+   * 新拟态的「按下去」是由 box-shadow 从外阴影翻转成内阴影完成的，很快（约 120ms），
+   * 但视觉上只发生在边缘，手指/鼠标落点本身没有任何反馈。
+   * 这里在落点补一圈水波：它和新拟态的凹陷是同一个隐喻 —— 表面被压下去、
+   * 涟漪从受力点向外散开。苹果在 iOS 的按钮与列表项上用的也是同一套手感。
+   *
+   * 实现要点：
+   *   · 用一个 document 级委托，覆盖主页与设置页所有可点控件，无需逐个绑定；
+   *   · 只对「确实有边框圆角」的控件生效，命中列表写死，避免误伤正文链接；
+   *   · 波纹节点在动画结束后自行移除，不长期占用 DOM。
+   */
+  const RIPPLE_SEL = '.btn, .icon-btn, .ctrl, .seg__item, .s-nav__item, .chip,' +
+                     '.add-btn, .playlist__item, .color-dot, .theme-mini';
+
+  function spawnRipple(e) {
+    const host = e.target.closest && e.target.closest(RIPPLE_SEL);
+    if (!host || host.disabled) return;
+    const r = host.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    // 以落点为圆心、以「到最远角的距离」为半径，保证波纹能铺满整个控件
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    // 键盘触发（回车/空格）时 clientX/Y 恒为 0，这时退化为从控件中心扩散
+    const cx = (e.clientX || e.detail === 0) ? x : r.width / 2;
+    const cy = (e.clientY || e.detail === 0) ? y : r.height / 2;
+    const radius = Math.hypot(Math.max(cx, r.width - cx), Math.max(cy, r.height - cy));
+
+    const wave = document.createElement('span');
+    wave.className = 'press-wave';
+    wave.setAttribute('aria-hidden', 'true');
+    wave.style.setProperty('--pw-x', cx + 'px');
+    wave.style.setProperty('--pw-y', cy + 'px');
+    wave.style.setProperty('--pw-r', radius + 'px');
+    host.appendChild(wave);
+    setTimeout(() => wave.remove(), 620);
+  }
+
+  function bindPressRipple() {
+    document.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;                       // 只响应左键
+      if (!store.get('theme.motion')) return;           // 设置里关掉动效就完全不插 DOM
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      spawnRipple(e);
     }, { passive: true });
   }
 
@@ -557,25 +638,77 @@
       entries.forEach((en) => {
         if (en.isIntersecting) { en.target.classList.add('is-in'); io.unobserve(en.target); }
       });
-    }, { rootMargin: '0px 0px -8% 0px', threshold: .08 });
+    },
+    // 只要露头就浮现：原来是 -8% 底边 + 8% 面积阈值，
+    // 结果"在首屏底部只露出一部分"的板块（最典型的就是最下面的联系方式）
+    // 会一直停在 opacity:0，屏幕上留下一块看不见的空白，要再滚一下才突然冒出来。
+    { rootMargin: '0px', threshold: 0 });
     $$('.reveal:not(.is-in)').forEach((el) => io.observe(el));
+  }
+
+  /**
+   * 立刻浮现：不等滚动就给元素加 is-in。
+   * 隔两帧再加，好让 CSS 的淡入/上浮过渡真的播出来，而不是硬切。
+   */
+  function revealNow(selector) {
+    const scope = typeof selector === 'string' ? $(selector) : selector;
+    if (!scope) return;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (scope.classList && scope.classList.contains('reveal')) scope.classList.add('is-in');
+      $$('.reveal', scope).forEach((el) => el.classList.add('is-in'));
+    }));
   }
 
   /* --------------------------------------------------------------------------
    * 8. 渲染总入口
+   * ---------------------------------------------------------------------------
+   * ★ 按板块比对数据指纹，只有真的变了才重建 DOM。
+   *   否则每次 store 变动（切循环模式、切昼夜、拖音量…）都会把右侧卡片
+   *   整块重建 —— 新节点带着 .reveal 的初始态（opacity:0 + 下移 22px），
+   *   于是整片内容又"刷新浮起"一次，看起来像页面在闪。
    * ------------------------------------------------------------------------ */
+  const SIGS = Object.create(null);
+  function renderWhenChanged(key, payload, fn) {
+    let sig;
+    try { sig = JSON.stringify(payload); } catch (e) { sig = null; }
+    if (sig !== null && SIGS[key] === sig) return false;
+    SIGS[key] = sig;
+    fn();
+    return true;
+  }
+
   let firstRender = true;
   function renderAll() {
     const d = store.data;
-    renderProfile(d);
-    renderBio(d);
-    renderSkills(d);
-    renderProjects(d);
-    renderContact(d);
-    player.setTracks((d.music && d.music.tracks) || [], !firstRender);
-    player.renderLyrics(player.currentTrack());
-    if (!firstRender) { $('#playlist').hidden = true; }
+
+    renderWhenChanged('profile',
+      [d.profile.name, d.profile.title, d.profile.motto, d.profile.avatar],
+      () => renderProfile(d));
+
+    renderWhenChanged('bio',
+      [d.profile.bio, d.profile.github, (d.skills || []).length, (d.projects || []).length, (d.music.tracks || []).length],
+      () => renderBio(d));
+
+    renderWhenChanged('skills', d.skills, () => renderSkills(d));
+    renderWhenChanged('projects', [d.projects, d.profile.github], () => renderProjects(d));
+    renderWhenChanged('contact', d.contact, () => renderContact(d));
+
+    // 播放器：只有曲库真的变了才重建列表（并且保留播放列表抽屉的开合状态）
+    renderWhenChanged('tracks', (d.music && d.music.tracks) || [], () => {
+      player.setTracks((d.music && d.music.tracks) || [], !firstRender);
+    });
+    // 歌词只在「换歌 / 改歌词 / 切换显示」时重建，避免重置滚动位置
+    const cur = player.currentTrack();
+    renderWhenChanged('lyrics',
+      [cur && cur.id, cur && cur.lyrics, store.get('music.showLyrics')],
+      () => player.renderLyrics(cur));
+    // 循环模式可能在设置页被改，这里同步主页按钮
+    renderWhenChanged('loop', store.get('music.loop'), () => player.updateLoopUI());
+
     observeReveal();
+    // ★ 联系方式板块不等滚动：页面一渲染就让它浮现（它位于页面最底部，
+    //   若交给滚动观察，首屏底部会先留一块看不见的空白）
+    revealNow('#sec-contact');
     firstRender = false;
   }
 
@@ -585,6 +718,7 @@
     theme.init();
     player.init();
     bindCardEffects();
+    bindPressRipple();
     bindDelegates();
 
     // 主题按钮

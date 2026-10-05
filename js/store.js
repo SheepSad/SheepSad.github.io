@@ -36,9 +36,17 @@
         manual: 'light',       // 手动模式下当前主题：'light' 白天 | 'dark' 黑夜
         dayStart: 7,           // 白天开始（0-23 点）
         nightStart: 19,        // 黑夜开始（0-23 点），与 dayStart 相同表示不切换
-        accent: '#5b7cfa',     // 强调色（可自定义）
-        radius: 20,            // 圆角
-        blur: 18,              // 毛玻璃模糊强度
+
+        /* 配色：默认「原生新拟物」= 完全使用 css/theme.css 里作者写的那套新拟态配色 */
+        accent: '#0071e3',     // 强调色（Apple 系统蓝）
+        radius: 22,            // 圆角
+        preset: 'native',      // 配色预设：native | apple | warm | graphite | midnight | custom
+        customColor: {         // 仅当 preset = 'custom' 时生效（白天 / 黑夜各一套）
+          light: { bg: '#e8edf5', text: '#0b0d12' },
+          dark:  { bg: '#14161c', text: '#f2f4f8' }
+        },
+        // 说明：毛玻璃强度已下线（新拟态皮肤不再需要调节模糊），--blur 改为 CSS 固定值
+
         motion: true,          // 是否开启切换动效
         duration: 620,         // 动效时长(ms)
         effect: 'ripple'       // 切换特效：ripple 波纹 | wipe 圆形擦除 | fade 淡入淡出
@@ -182,6 +190,51 @@
   }
 
   /* --------------------------------------------------------------------------
+   * 3.1 版本迁移 + 统一的数据构建入口
+   * ---------------------------------------------------------------------------
+   * 老版本留在 localStorage / content.json 里的字段需要被搬到新结构上，
+   * 否则用户升级后看到的还是旧配色。原则：只改「旧版默认值」，用户真正自定义过的值不动。
+   * ------------------------------------------------------------------------ */
+  const LEGACY_ACCENTS = ['#5b7cfa', '#6d8bff'];   // v1 的默认强调色（靛蓝）→ 现在统一为 Apple 系统蓝
+
+  function migrate(data) {
+    const t = (data && data.theme) || {};
+    if (LEGACY_ACCENTS.indexOf(String(t.accent).toLowerCase()) >= 0) t.accent = defaultData().theme.accent;
+    delete t.blur;                                  // 「毛玻璃强度」设置已下线，--blur 改为 CSS 固定值
+
+    /* 早期版本用过 theme.textColor / theme.bgColor 这种「白天黑夜手动二选一」的写法，
+       现在改为「配色预设」。若用户当时确实改过颜色，就把那套颜色平移成 custom 预设，
+       没改过的直接回落到原生新拟态配色。 */
+    const def = defaultData().theme;
+    if (t.textColor || t.bgColor) {
+      const tc = t.textColor || {}, bc = t.bgColor || {};
+      const touched =
+        (tc.light && tc.light !== def.customColor.light.text) || (tc.dark && tc.dark !== def.customColor.dark.text) ||
+        (bc.light && bc.light !== def.customColor.light.bg) || (bc.dark && bc.dark !== def.customColor.dark.bg);
+      if (touched) {
+        t.preset = 'custom';
+        t.customColor = {
+          light: { bg: normHexish(bc.light, def.customColor.light.bg), text: normHexish(tc.light, def.customColor.light.text) },
+          dark:  { bg: normHexish(bc.dark, def.customColor.dark.bg),  text: normHexish(tc.dark, def.customColor.dark.text) }
+        };
+      }
+      delete t.textColor;
+      delete t.bgColor;
+    }
+    return data;
+  }
+
+  /** 迁移时用的宽松颜色校验：不是 #rrggbb 就回落到默认值 */
+  function normHexish(v, fallback) {
+    return /^#[0-9a-f]{6}$/i.test(String(v || '').trim()) ? String(v).trim().toLowerCase() : fallback;
+  }
+
+  /** 所有数据都必须经过这里：合并默认值 → 迁移 → 交给页面 */
+  function buildData(raw) {
+    return migrate(mergeDeep(defaultData(), raw));
+  }
+
+  /* --------------------------------------------------------------------------
    * 4. IndexedDB —— 音乐文件仓库（支持拖入 mp3/flac/wav 等）
    * ------------------------------------------------------------------------ */
   const Audio = {
@@ -273,8 +326,7 @@
 
     /** 重新从 localStorage 读取（另一个标签页保存后会触发） */
     reload() {
-      const saved = readLS();
-      this.data = mergeDeep(defaultData(), saved);
+      this.data = buildData(readLS());
       this.emit('change', this.data);
       return this.data;
     },
@@ -284,7 +336,13 @@
       const saved = readLS();
       this.hasSaved = !!saved;                 // 是否已经有本地数据（决定要不要装载站点内容）
       this.meta = readMeta();
-      this.data = mergeDeep(defaultData(), saved);
+      // 老版本留下的本地数据没有 meta 记录：视同「作者自己编辑过」，
+      // 标记为 dirty，避免升级后被仓库里的 content.json 覆盖掉手工内容。
+      if (this.hasSaved && !this.meta.seededAt && !this.meta.dirty) {
+        this.meta.dirty = true;
+        writeMeta(this.meta);
+      }
+      this.data = buildData(saved);
       return this.data;
     },
 
@@ -305,7 +363,7 @@
 
     /** 把一份站点内容写入本地（不算"访客修改"） */
     applySiteContent(json) {
-      this.data = mergeDeep(defaultData(), json);
+      this.data = buildData(json);
       writeLS(this.data);
       this.hasSaved = true;
       this.meta = readMeta();
@@ -390,7 +448,7 @@
 
     importJSON(text) {
       const parsed = JSON.parse(text);
-      this.data = mergeDeep(defaultData(), parsed);
+      this.data = buildData(parsed);
       writeLS(this.data);
       this.markEdited();
       this.emit('change', this.data);
